@@ -75,8 +75,4 @@ public class UserEntity extends BaseEntity<UserEntity> {
     @TableField("weight")
     private Integer weight;
 
-    @Override
-    public Serializable pkVal() {
-        return null;
-    }
 }
