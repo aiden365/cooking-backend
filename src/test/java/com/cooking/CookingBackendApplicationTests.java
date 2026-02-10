@@ -1,4 +1,4 @@
-package com.aiden.study.cookingbackend;
+package com.cooking;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

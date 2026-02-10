@@ -1,4 +1,4 @@
-package com.aiden.study.cookingbackend;
+package com.cooking;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
