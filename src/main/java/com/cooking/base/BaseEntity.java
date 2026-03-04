@@ -10,7 +10,7 @@ import java.util.Date;
 
 @Data
 @FieldNameConstants
-public class BaseEntity<T> implements Serializable {
+public class BaseEntity<T>  {
 
 
     @TableId(type = IdType.AUTO)

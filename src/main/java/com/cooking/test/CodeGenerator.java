@@ -1,10 +1,11 @@
 package com.cooking.test;
 
-import com.baomidou.mybatisplus.annotation.IdType;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.generator.FastAutoGenerator;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
+import com.baomidou.mybatisplus.generator.model.ClassAnnotationAttributes;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseService;
@@ -16,7 +17,7 @@ public class CodeGenerator {
     static String username = "root";
     static String password = "123456";
 
-    public static void main(String[] args) {
+    public static void main2(String[] args) {
 
         // 使用 FastAutoGenerator 快速配置代码生成器
         FastAutoGenerator.create(url, username, password)
@@ -37,7 +38,7 @@ public class CodeGenerator {
                             .xml("mapper.xml"); // 设置 Mapper XML 文件包名
                 })
                 .strategyConfig(builder -> {
-                    builder.addInclude("tbl_user") // 设置需要生成的表名
+                    builder.addInclude("^tbl_.*") // 设置需要生成的表名
                             .addTablePrefix("tbl_")
                             .entityBuilder()
                             .superClass(BaseEntity.class)
@@ -46,29 +47,43 @@ public class CodeGenerator {
                             .enableLombok()
                             .enableRemoveIsPrefix()
                             .enableTableFieldAnnotation()
-                            .enableActiveRecord()
-                            .versionColumnName("version")
+                            /*.enableActiveRecord()
+                            .versionColumnName("version")*/
                             .logicDeleteColumnName("deleted")
                             .naming(NamingStrategy.no_change)
                             .columnNaming(NamingStrategy.underline_to_camel)
                             .addSuperEntityColumns("id", "create_user", "created_time", "update_user", "updated_time")
-                            .addIgnoreColumns("xxx")
-                            /*.addTableFills(new Column("create_time", FieldFill.INSERT))
-                            .addTableFills(new Property("updateTime", FieldFill.INSERT_UPDATE))*/
-                            .idType(IdType.AUTO)
-                            .formatFileName("%sEntity")
+                            /*.addIgnoreColumns("xxx")
+                            .addTableFills(new Column("create_time", FieldFill.INSERT))
+                            .addTableFills(new Property("updateTime", FieldFill.INSERT_UPDATE))
+                            .idType(IdType.AUTO)*/
+                            /*.formatFileName("%sEntity")*/
+                            .convertFileName(e -> {
+                                return StrUtil.upperFirst(StrUtil.toCamelCase(e)) + "Entity";
+                            })
+                            .enableLombok(new ClassAnnotationAttributes("@Data","lombok.Data"))
 
 
                             .controllerBuilder()
                             .superClass(BaseController.class)
                             .enableRestStyle()
-                            .formatFileName("%sApi")
+                            /*.formatFileName("%sApi")*/
+                            .convertFileName(e -> {
+                                return StrUtil.upperFirst(StrUtil.toCamelCase(e)) + "Api";
+                            })
 
                             .serviceBuilder()
                             .superServiceClass(BaseService.class)
                             .superServiceImplClass(BaseServiceImpl.class)
-                            .formatServiceFileName("%sService")
-                            .formatServiceImplFileName("%sServiceImpl")
+                            .convertServiceFileName(e -> {
+                                return StrUtil.upperFirst(StrUtil.toCamelCase(e)) + "Service";
+                            })
+                            .convertServiceImplFileName(e ->{
+                                return StrUtil.upperFirst(StrUtil.toCamelCase(e)) + "ServiceImpl";
+                            })
+                            /*.formatServiceFileName("%sService")
+                            .formatServiceImplFileName("%sServiceImpl")*/
+
 
 
                             .mapperBuilder()
@@ -76,8 +91,14 @@ public class CodeGenerator {
                             /*.enableMapperAnnotation()*/
                             /*.enableBaseResultMap()*/
                             /*.enableBaseColumnList()*/
-                            .formatMapperFileName("%sMapper")
-                            .formatXmlFileName("%sXml")
+                            .convertMapperFileName(e -> {
+                                return StrUtil.upperFirst(StrUtil.toCamelCase(e)) + "Mapper";
+                            })
+                            .convertXmlFileName(e -> {
+                                return StrUtil.upperFirst(StrUtil.toCamelCase(e)) + "Xml";
+                            })
+                            /*.formatMapperFileName("%sMapper")
+                            .formatXmlFileName("%sXml")*/
 
                             ;
 
