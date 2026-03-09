@@ -114,6 +114,7 @@ public class DishApi extends BaseController {
         Message message = promptTemplate.createMessage(Map.of("dishName", dishName));
 
         Prompt prompt = Prompt.builder().messages(List.of(systemPromptTemplateMessage, message)).build();
+
         return qwenChatModel.stream(prompt.toString());
     }
 

@@ -15,7 +15,7 @@ public class AIRecipeDTO {
     @JsonPropertyDescription("菜品名称，需与用户输入的 course 一致，如西红柿炒鸡蛋")
     private String name;
     @JsonPropertyDescription("烹饪时间，如30分钟")
-    private String cookingTime;
+    private String takeTimes;
     @JsonPropertyDescription("食材列表，包含食材名称、用量、以及预处理说明")
     private List<Materials> materials;
     @JsonPropertyDescription("调料列表，包含调料名称、用量")
@@ -32,7 +32,7 @@ public class AIRecipeDTO {
         @JsonPropertyDescription("食材用量，如：2-3个")
         private String dosage;
         @JsonPropertyDescription("预处理说明，如：打入碗中，加少许盐搅拌均匀")
-        private String remark;
+        private String deal;
     }
     @Data
     public static class Flavors {

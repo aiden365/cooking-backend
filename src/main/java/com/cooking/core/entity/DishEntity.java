@@ -33,6 +33,18 @@ public class DishEntity extends BaseEntity {
     private String imgPath;
 
     /**
+     * 烹饪小贴士
+     */
+    @TableField("tips")
+    private String tips;
+
+    /**
+     * 预计用时
+     */
+    @TableField("take_times")
+    private String takeTimes;
+
+    /**
      * 菜品浏览量
      */
     @TableField("view_count")

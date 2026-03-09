@@ -12,11 +12,11 @@ import com.cooking.base.BaseServiceImpl;
 
 public class CodeGenerator {
 
-    static String url = "jdbc:mysql://192.168.19.119:3308/cookbook?autoReconnect=true&allowPublicKeyRetrieval=true&useAffectedRows=true&useUnicode=true&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF8";
+    static String url = "jdbc:mysql://192.168.19.119:3306/cookbook?autoReconnect=true&allowPublicKeyRetrieval=true&useAffectedRows=true&useUnicode=true&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF8";
     static String username = "root";
     static String password = "123456";
 
-    public static void main2(String[] args) {
+    public static void main(String[] args) {
 
         // 使用 FastAutoGenerator 快速配置代码生成器
         FastAutoGenerator.create(url, username, password)
@@ -37,7 +37,7 @@ public class CodeGenerator {
                             .xml("mapper.xml"); // 设置 Mapper XML 文件包名
                 })
                 .strategyConfig(builder -> {
-                    builder.addInclude("^tbl_.*") // 设置需要生成的表名
+                    builder.addInclude("tbl_dish_flavors") // 设置需要生成的表名
                             .addTablePrefix("tbl_")
                             .entityBuilder()
                             .superClass(BaseEntity.class)

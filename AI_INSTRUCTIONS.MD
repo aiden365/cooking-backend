@@ -38,6 +38,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 |  |  └── resources                                 # 项目资源文件 
 |  |     ├── application.properties                 # 项目配置文件
 |  |     └── mapper                                 # Mybatis-Plus Mapper接口对应的XML文件目录
+|  |     └── template                               # 模板文件，如：提示词模板等
 ├── pom.xml                                         # maven项目配置文件     
 ```
 ## 4. 开发路线图 (Project Roadmap)
@@ -70,6 +71,10 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：** 请根据以下具体要求，为我生成代码。
-> 在`DishApi.java`中完成菜谱智能生成接口开发接口开发。该功能主要是让用户设置自身每日的营养目标，为菜品的推荐提供依据。
-> 对于添加接口和修改接口可以合并为一个save接口，接口接收id、用户id、营养元素名称、目标值参数。添加时请根据系统参数（SystemParamEnum.user_nutrition_limit）中配置的数量进行限制
-> 系统参数配置可通过SystemParamsService.findByName方法获取
+> 在`DishApi.java`中完成菜谱智能生成接口开发接口开发。该功能主要是让用户可以根据菜品名称生成菜品的制作过程，并将AI生成的内容保存到数据库中，方便下次查询。
+> 我已经完成了提示词及AI生成方法调用，AI响应的信息可以转换为AIRecipeDTO.java对象，请按照以下要求继续完成代码：
+> 提取AI生成内容中的name、take_times、tips字段，作为菜品信息保存到数据库，如果菜品名已存在则不进行后续操作
+> 提取AI生成内容中的materials字段，作为菜品制作步骤保存到数据库表 tbl_dish_material
+> 提取AI生成内容中的flavors字段，作为菜品的调料列表保存到数据库表 tbl_dish_flavor （该表对应的API、Service、mapper等基础代码未生成，请自行生成）
+> 提取AI生成内容中的steps字段，作为菜品制作步骤保存到数据库表 tbl_dish_step
+> 再将菜品保存到数据的同时使用DishApi.redisVectorStore将菜品名称和菜品作为一个整体保存到向量数据库中，方便后续通过菜品名或食材查询该菜谱

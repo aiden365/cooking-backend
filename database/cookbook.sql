@@ -25,6 +25,8 @@ CREATE TABLE `tbl_dish`  (
   `id` bigint(20) NOT NULL COMMENT '主键ID',
   `name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '菜品名称',
   `img_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '菜品图片',
+  `tips` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '烹饪小贴士',
+  `take_times` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '预计用时',
   `view_count` bigint(20) NOT NULL COMMENT '菜品浏览量',
   `active_val` int(11) NOT NULL COMMENT '菜谱活跃值',
   `popular_val` int(11) NOT NULL COMMENT '菜谱人气值',
@@ -98,7 +100,7 @@ CREATE TABLE `tbl_dish_material`  (
   `dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
   `material_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '食材名称',
   `dosage` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '食材用量',
-  `remark` varchar(255) NOT NULL COMMENT '备注',
+  `deal` varchar(255) NOT NULL COMMENT '备注',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
   `update_time` datetime NOT NULL COMMENT '修改时间',
@@ -106,6 +108,24 @@ CREATE TABLE `tbl_dish_material`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品食材表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for tbl_dish_flavors
+-- ----------------------------
+DROP TABLE IF EXISTS `tbl_dish_flavors`;
+CREATE TABLE `tbl_dish_flavors`  (
+`id` bigint(20) NOT NULL COMMENT '主键ID',
+`dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
+`flavor_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '调料名称',
+`dosage` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '调料用量',
+`create_time` datetime NOT NULL COMMENT '创建时间',
+`create_user` bigint(20) NOT NULL COMMENT '创建人',
+`update_time` datetime NOT NULL COMMENT '修改时间',
+`update_user` bigint(20) NOT NULL COMMENT '修改人',
+`deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
+PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品调料表' ROW_FORMAT = Dynamic;
+
 
 -- ----------------------------
 -- Table structure for tbl_dish_step
