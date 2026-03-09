@@ -49,4 +49,6 @@ public class DishEntity extends BaseEntity {
      */
     @TableField("popular_val")
     private Integer popularVal;
+
+
 }

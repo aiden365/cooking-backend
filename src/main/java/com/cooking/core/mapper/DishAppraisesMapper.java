@@ -1,11 +1,15 @@
 package com.cooking.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.core.entity.DishAppraisesEntity;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
 
 /**
  * <p>
- * 菜品评价表 Mapper 接口
+ * Dish appraises mapper
  * </p>
  *
  * @author aiden
@@ -13,4 +17,5 @@ import com.cooking.core.entity.DishAppraisesEntity;
  */
 public interface DishAppraisesMapper extends BaseMapper<DishAppraisesEntity> {
 
+    IPage<DishAppraisesEntity> findPage(IPage<DishAppraisesEntity> page, @Param("params") Map<String, Object> params);
 }

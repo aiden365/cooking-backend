@@ -1,11 +1,15 @@
 package com.cooking.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.core.entity.DishStepEntity;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
 
 /**
  * <p>
- * 菜品制作步骤表 Mapper 接口
+ * Dish step mapper
  * </p>
  *
  * @author aiden
@@ -13,4 +17,5 @@ import com.cooking.core.entity.DishStepEntity;
  */
 public interface DishStepMapper extends BaseMapper<DishStepEntity> {
 
+    IPage<DishStepEntity> findPage(IPage<DishStepEntity> page, @Param("params") Map<String, Object> params);
 }

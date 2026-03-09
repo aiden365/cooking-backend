@@ -1,11 +1,15 @@
 package com.cooking.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.core.entity.UserDietRecordEntity;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
 
 /**
  * <p>
- * 用户饮食记录表 Mapper 接口
+ * User diet record mapper
  * </p>
  *
  * @author aiden
@@ -13,4 +17,5 @@ import com.cooking.core.entity.UserDietRecordEntity;
  */
 public interface UserDietRecordMapper extends BaseMapper<UserDietRecordEntity> {
 
+    IPage<UserDietRecordEntity> findPage(IPage<UserDietRecordEntity> page, @Param("params") Map<String, Object> params);
 }

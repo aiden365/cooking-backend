@@ -14,6 +14,9 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.Map;
+import java.util.Optional;
+
 @Slf4j
 public class BaseController {
 
@@ -23,11 +26,9 @@ public class BaseController {
     @Value("${upload.path}")
     public String uploadPath;
 
+    protected int pageNo = 0;
+    protected int pageSize = -1;
 
-    //当前访问授权信息
-    protected static final ThreadLocal<AuthInfo> authInfo = new TransmittableThreadLocal<>();
-    //当前访问授权码
-    protected static final ThreadLocal<String> authCode = new TransmittableThreadLocal<>();
 
     @Autowired
     private UserService userService;
@@ -35,39 +36,15 @@ public class BaseController {
     @ModelAttribute
     public void init(HttpServletRequest request) {
         log.info("请求接口：{}，请求ip：{}，请求处理类：{}", request.getRequestURI(), IPAdrressUtil.getIpAdrress(request), this.getClass().getCanonicalName());
-        authCode.set(request.getHeader(ConstKit.HEADER_AUTH_CODE));
-        authInfo.set(getAuthInfo());
-    }
-
-    /**
-     * 当前授权设备信息
-     *
-     * @return
-     */
-    public AuthInfo getAuthInfo() {
-
-        RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
-        HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-
-        if (StrUtil.isEmpty(authCode.get())) {
-            return null;
-        }
-        return new AuthInfo().setUserId("1");
+        pageNo = Optional.ofNullable(request.getParameter("pageNo")).map(Integer::valueOf).orElse(0);
+        pageSize = Optional.ofNullable(request.getParameter("pageSize")).map(Integer::valueOf).orElse(-1);
     }
 
 
-    /**
-     * 更新当前授权设备信息
-     *
-     * @return
-     */
-    public synchronized String updateAuthInfo(Object authInfo) {
-        return authCode.get();
-    }
 
 
     protected BaseResponse ok() {
-        return ok(ConstKit.SUCCESS_MSG);
+        return ok(BaseResponse.Code.success.msg);
     }
 
     protected BaseResponse ok(String msg) {
@@ -75,15 +52,15 @@ public class BaseController {
     }
 
     protected BaseResponse ok(Object object) {
-        return ok(ConstKit.SUCCESS_MSG, object);
+        return ok(BaseResponse.Code.success.msg, object);
     }
 
     protected BaseResponse ok(String msg, Object object) {
-        return new BaseResponse(ConstKit.SUCCESS, msg, object, authCode.get());
+        return new BaseResponse(BaseResponse.Code.success.code, msg, object);
     }
 
     protected BaseResponse fail() {
-        return fail(ConstKit.FAIL_MSG);
+        return fail(BaseResponse.Code.fail.msg);
     }
 
     protected BaseResponse fail(String msg) {
@@ -91,11 +68,11 @@ public class BaseController {
     }
 
     protected BaseResponse fail(Object object) {
-        return fail(ConstKit.FAIL_MSG, object);
+        return fail(BaseResponse.Code.fail.msg, object);
     }
 
     protected BaseResponse fail(String msg, Object object) {
-        return new BaseResponse(ConstKit.FAIL, msg, object, authCode.get());
+        return new BaseResponse(BaseResponse.Code.fail.code, msg, object);
     }
 
 

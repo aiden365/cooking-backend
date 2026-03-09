@@ -37,4 +37,11 @@ public class DishMaterialEntity extends BaseEntity {
      */
     @TableField("dosage")
     private String dosage;
+
+    /**
+     * 备注
+     */
+    @TableField("remark")
+    private String remark;
+
 }

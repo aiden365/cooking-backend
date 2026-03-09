@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.DishStepEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.DishStepEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 菜品制作步骤表 服务类
+ * Dish step service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,9 @@ import com.cooking.base.BaseService;
  */
 public interface DishStepService extends BaseService<DishStepEntity> {
 
+    List<DishStepEntity> findList(Map<String, Object> params);
+
+    IPage<DishStepEntity> findPage(IPage<DishStepEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

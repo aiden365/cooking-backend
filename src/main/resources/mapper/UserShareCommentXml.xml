@@ -2,4 +2,21 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cooking.core.mapper.UserShareCommentMapper">
 
+    <select id="findPage" resultType="com.cooking.core.entity.UserShareCommentEntity">
+        select * from tbl_user_share_comment where 1=1
+        <if test="params.userId != null">
+            and user_id = #{params.userId}
+        </if>
+        <if test="params.userShareId != null">
+            and user_share_id = #{params.userShareId}
+        </if>
+        <if test="params.parentId != null">
+            and parent_id = #{params.parentId}
+        </if>
+        <if test="params.search != null">
+            and (content like concat('%',#{params.search},'%') or exists(select 1 from tbl_dish where tbl_dish.id = tbl_user_share.dish_id and tbl_dish.name like concat('%',#{params.search},'%')))
+        </if>
+
+        order by create_time desc
+    </select>
 </mapper>

@@ -1,11 +1,15 @@
 package com.cooking.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.core.entity.UserDishCollectEntity;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
 
 /**
  * <p>
- * 用户菜品收藏表 Mapper 接口
+ * User dish collect mapper
  * </p>
  *
  * @author aiden
@@ -13,4 +17,5 @@ import com.cooking.core.entity.UserDishCollectEntity;
  */
 public interface UserDishCollectMapper extends BaseMapper<UserDishCollectEntity> {
 
+    IPage<UserDishCollectEntity> findPage(IPage<UserDishCollectEntity> page, @Param("params") Map<String, Object> params);
 }

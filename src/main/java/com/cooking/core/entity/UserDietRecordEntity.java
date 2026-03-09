@@ -33,7 +33,7 @@ public class UserDietRecordEntity extends BaseEntity {
     private Long dishId;
 
     /**
-     * 日期
+     * 日期，格式：yyyy-MM-dd
      */
     @TableField("diet_date")
     private String dietDate;
@@ -43,4 +43,16 @@ public class UserDietRecordEntity extends BaseEntity {
      */
     @TableField("diet_order")
     private Integer dietOrder;
+
+    /**
+     * 用户名
+     */
+    @TableField(exist = false)
+    private String userName;
+
+    /**
+     * 菜品名
+     */
+    @TableField(exist = false)
+    private String dishName;
 }

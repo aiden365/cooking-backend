@@ -1,14 +1,21 @@
 package com.cooking.core.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cooking.base.BaseServiceImpl;
 import com.cooking.core.entity.UserNutritionEntity;
 import com.cooking.core.mapper.UserNutritionMapper;
 import com.cooking.core.service.UserNutritionService;
-import com.cooking.base.BaseServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 用户营养标准表 服务实现类
+ * User nutrition service impl
  * </p>
  *
  * @author aiden
@@ -17,4 +24,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserNutritionServiceImpl extends BaseServiceImpl<UserNutritionMapper, UserNutritionEntity> implements UserNutritionService {
 
+    @Autowired
+    private UserNutritionMapper userNutritionMapper;
+
+    @Override
+    public IPage<UserNutritionEntity> findPage(IPage<UserNutritionEntity> page, Map<String, Object> params) {
+        return userNutritionMapper.findPage(page, params);
+    }
+
+    @Override
+    public void deleteByIds(Set<String> ids) {
+
+    }
 }

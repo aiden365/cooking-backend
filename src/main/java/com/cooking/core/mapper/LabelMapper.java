@@ -1,11 +1,15 @@
 package com.cooking.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.core.entity.LabelEntity;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
 
 /**
  * <p>
- * 用户标签表 Mapper 接口
+ * Label mapper
  * </p>
  *
  * @author aiden
@@ -13,4 +17,5 @@ import com.cooking.core.entity.LabelEntity;
  */
 public interface LabelMapper extends BaseMapper<LabelEntity> {
 
+    IPage<LabelEntity> findPage(IPage<LabelEntity> page, @Param("params") Map<String, Object> params);
 }

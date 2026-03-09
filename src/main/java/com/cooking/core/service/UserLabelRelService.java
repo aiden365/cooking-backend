@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.UserLabelRelEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.UserLabelRelEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 用户标签关联表 服务类
+ * User label rel service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,9 @@ import com.cooking.base.BaseService;
  */
 public interface UserLabelRelService extends BaseService<UserLabelRelEntity> {
 
+    List<UserLabelRelEntity> findList(Map<String, Object> params);
+
+    IPage<UserLabelRelEntity> findPage(IPage<UserLabelRelEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

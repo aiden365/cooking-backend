@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.UserDishCollectEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.UserDishCollectEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 用户菜品收藏表 服务类
+ * User dish collect service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,7 @@ import com.cooking.base.BaseService;
  */
 public interface UserDishCollectService extends BaseService<UserDishCollectEntity> {
 
+    IPage<UserDishCollectEntity> findPage(IPage<UserDishCollectEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

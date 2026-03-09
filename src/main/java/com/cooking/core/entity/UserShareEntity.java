@@ -43,4 +43,16 @@ public class UserShareEntity extends BaseEntity {
      */
     @TableField("description")
     private String description;
+
+    /**
+     * 用户名
+     */
+    @TableField(exist = false)
+    private String userName;
+
+    /**
+     * 菜品名
+     */
+    @TableField(exist = false)
+    private String dishName;
 }

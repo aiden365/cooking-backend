@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.RepositoryEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.RepositoryEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 知识库表 服务类
+ * Repository service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,9 @@ import com.cooking.base.BaseService;
  */
 public interface RepositoryService extends BaseService<RepositoryEntity> {
 
+    List<RepositoryEntity> findList(Map<String, Object> params);
+
+    IPage<RepositoryEntity> findPage(IPage<RepositoryEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

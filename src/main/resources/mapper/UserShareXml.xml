@@ -2,4 +2,15 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cooking.core.mapper.UserShareMapper">
 
+    <select id="findPage" resultType="com.cooking.core.entity.UserShareEntity">
+        select * from tbl_user_share where 1=1
+        <if test="params.userId != null">
+            and user_id = #{params.userId}
+        </if>
+
+        <if test="params.search != null and params.search != ''">
+            and exists(select 1 from tbl_dish where tbl_dish.id = tbl_user_share.dish_id and tbl_dish.name like concat('%',#{params.search},'%'))
+        </if>
+        order by create_time desc
+    </select>
 </mapper>

@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.LabelEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.LabelEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 用户标签表 服务类
+ * Label service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,8 @@ import com.cooking.base.BaseService;
  */
 public interface LabelService extends BaseService<LabelEntity> {
 
+
+    IPage<LabelEntity> findPage(IPage<LabelEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

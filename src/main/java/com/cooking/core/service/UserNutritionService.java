@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.UserNutritionEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.UserNutritionEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 用户营养标准表 服务类
+ * User nutrition service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,7 @@ import com.cooking.base.BaseService;
  */
 public interface UserNutritionService extends BaseService<UserNutritionEntity> {
 
+    IPage<UserNutritionEntity> findPage(IPage<UserNutritionEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

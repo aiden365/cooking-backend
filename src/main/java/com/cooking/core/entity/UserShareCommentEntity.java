@@ -43,4 +43,10 @@ public class UserShareCommentEntity extends BaseEntity {
      */
     @TableField("content")
     private String content;
+
+    /**
+     * 用户名
+     */
+    @TableField(exist = false)
+    private String userName;
 }

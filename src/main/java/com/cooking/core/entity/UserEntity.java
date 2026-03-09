@@ -67,4 +67,7 @@ public class UserEntity extends BaseEntity {
      */
     @TableField("weight")
     private Integer weight;
+
+
+
 }

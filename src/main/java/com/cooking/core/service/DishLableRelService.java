@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.DishLableRelEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.DishLableRelEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 菜品标签关联表 服务类
+ * Dish lable rel service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,9 @@ import com.cooking.base.BaseService;
  */
 public interface DishLableRelService extends BaseService<DishLableRelEntity> {
 
+    List<DishLableRelEntity> findList(Map<String, Object> params);
+
+    IPage<DishLableRelEntity> findPage(IPage<DishLableRelEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

@@ -13,8 +13,8 @@ import java.io.Serializable;
 @Data
 public class BaseResponse implements Serializable {
 
-    private int code = ConstKit.SUCCESS;
-    private String msg = ConstKit.SUCCESS_MSG;
+    private int code = Code.success.code;;
+    private String msg = Code.success.msg;;
     private Object data;
     private String authCode = "";
 
@@ -29,13 +29,13 @@ public class BaseResponse implements Serializable {
         return this;
     }
     public BaseResponse fail(){
-        this.code = ConstKit.FAIL;
-        this.msg = "fail";
+        this.code = Code.fail.code;
+        this.msg = Code.fail.msg;
         return this;
     }
 
     public BaseResponse fail(String massage){
-        this.code = ConstKit.FAIL;
+        this.code = Code.fail.code;
         this.msg = massage;
         return this;
     }
@@ -48,7 +48,7 @@ public class BaseResponse implements Serializable {
     public BaseResponse(Throwable e) {
         super();
         this.msg = e.getMessage();
-        this.code = ConstKit.FAIL;
+        this.code = Code.fail.code;
     }
 
     public BaseResponse(int code, String msg, Object data) {
@@ -101,6 +101,22 @@ public class BaseResponse implements Serializable {
     public BaseResponse setAuthCode(String authCode) {
         this.authCode = authCode;
         return this;
+    }
+
+    public enum Code{
+
+        success(0, "success"),
+        fail(1000, "fail"),
+        user_wdl(10001, "用户未登录"),
+        user_dlsb(10002, "用户登录失败"),
+
+        ;
+        public int code;
+        public String msg;
+        Code(int code, String msg){
+            this.code = code;
+            this.msg = msg;
+        }
     }
 }
 

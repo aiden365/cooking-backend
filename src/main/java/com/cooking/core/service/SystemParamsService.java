@@ -1,11 +1,17 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.SystemParamsEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.SystemParamsEntity;
+import com.cooking.enums.SystemParamEnum;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 系统参数表 服务类
+ * System params service
  * </p>
  *
  * @author aiden
@@ -13,4 +19,11 @@ import com.cooking.base.BaseService;
  */
 public interface SystemParamsService extends BaseService<SystemParamsEntity> {
 
+    List<SystemParamsEntity> findList(Map<String, Object> params);
+
+    IPage<SystemParamsEntity> findPage(IPage<SystemParamsEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
+
+    SystemParamsEntity findByName(SystemParamEnum paramEnum);
 }

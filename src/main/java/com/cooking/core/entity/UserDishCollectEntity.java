@@ -31,4 +31,16 @@ public class UserDishCollectEntity extends BaseEntity {
      */
     @TableField("dish_id")
     private Long dishId;
+
+    /**
+     * 用户名
+     */
+    @TableField(exist = false)
+    private String userName;
+
+    /**
+     * 菜品名
+     */
+    @TableField(exist = false)
+    private String dishName;
 }

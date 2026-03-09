@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.DishAppraisesEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.DishAppraisesEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 菜品评价表 服务类
+ * Dish appraises service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,7 @@ import com.cooking.base.BaseService;
  */
 public interface DishAppraisesService extends BaseService<DishAppraisesEntity> {
 
+    IPage<DishAppraisesEntity> findPage(IPage<DishAppraisesEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

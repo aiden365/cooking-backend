@@ -1,11 +1,15 @@
 package com.cooking.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.core.entity.SystemParamsEntity;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
 
 /**
  * <p>
- * 系统参数表 Mapper 接口
+ * System params mapper
  * </p>
  *
  * @author aiden
@@ -13,4 +17,5 @@ import com.cooking.core.entity.SystemParamsEntity;
  */
 public interface SystemParamsMapper extends BaseMapper<SystemParamsEntity> {
 
+    IPage<SystemParamsEntity> findPage(IPage<SystemParamsEntity> page, @Param("params") Map<String, Object> params);
 }

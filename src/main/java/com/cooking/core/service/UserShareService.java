@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.UserShareEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.UserShareEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 用户菜品分享表 服务类
+ * User share service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,7 @@ import com.cooking.base.BaseService;
  */
 public interface UserShareService extends BaseService<UserShareEntity> {
 
+    IPage<UserShareEntity> findPage(IPage<UserShareEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

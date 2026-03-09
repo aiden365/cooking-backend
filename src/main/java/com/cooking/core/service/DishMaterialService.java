@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.DishMaterialEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.DishMaterialEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 菜品食材表 服务类
+ * Dish material service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,7 @@ import com.cooking.base.BaseService;
  */
 public interface DishMaterialService extends BaseService<DishMaterialEntity> {
 
+    IPage<DishMaterialEntity> findPage(IPage<DishMaterialEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

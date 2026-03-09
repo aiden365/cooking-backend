@@ -43,4 +43,11 @@ public class DishCommentEntity extends BaseEntity {
      */
     @TableField("content")
     private String content;
+
+    /**
+     * 评论用户ID
+     */
+    @TableField(exist = false)
+    private String userName;
+
 }

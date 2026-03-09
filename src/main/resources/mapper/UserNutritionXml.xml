@@ -2,4 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cooking.core.mapper.UserNutritionMapper">
 
+    <select id="findPage" resultType="com.cooking.core.entity.UserNutritionEntity">
+        select * from tbl_user_nutrition where 1=1
+        <if test="param.userId != null">
+            and user_id = #{params.userId}
+        </if>
+        <if test="param.name != null">
+            and name like concat('%',#{params.name},'%')
+        </if>
+        order by create_time desc
+    </select>
 </mapper>

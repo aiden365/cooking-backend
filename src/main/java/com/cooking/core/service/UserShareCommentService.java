@@ -1,11 +1,16 @@
 package com.cooking.core.service;
 
-import com.cooking.core.entity.UserShareCommentEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
+import com.cooking.core.entity.UserShareCommentEntity;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
- * 用户分享评论表 服务类
+ * User share comment service
  * </p>
  *
  * @author aiden
@@ -13,4 +18,7 @@ import com.cooking.base.BaseService;
  */
 public interface UserShareCommentService extends BaseService<UserShareCommentEntity> {
 
+    IPage<UserShareCommentEntity> findPage(IPage<UserShareCommentEntity> page, Map<String, Object> params);
+
+    void deleteByIds(Set<String> ids);
 }

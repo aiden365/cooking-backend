@@ -2,4 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cooking.core.mapper.SystemParamsMapper">
 
+    <select id="findPage" resultType="com.cooking.core.entity.SystemParamsEntity">
+        select * from tbl_system_params where 1=1
+        order by create_time desc
+    </select>
 </mapper>
