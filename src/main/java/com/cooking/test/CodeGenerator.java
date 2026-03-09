@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.generator.FastAutoGenerator;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
-import com.baomidou.mybatisplus.generator.model.ClassAnnotationAttributes;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseService;
@@ -61,7 +60,7 @@ public class CodeGenerator {
                             .convertFileName(e -> {
                                 return StrUtil.upperFirst(StrUtil.toCamelCase(e)) + "Entity";
                             })
-                            .enableLombok(new ClassAnnotationAttributes("@Data","lombok.Data"))
+                            /*.enableLombok(new ClassAnnotationAttributes("@Data","lombok.Data"))*/
 
 
                             .controllerBuilder()

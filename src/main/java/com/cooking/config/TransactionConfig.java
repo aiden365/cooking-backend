@@ -28,7 +28,7 @@ import java.util.Map;
 @Configuration
 public class TransactionConfig {
 
-    private static final String pointcutExpression = "execution (* com.deskmedia.business..*(..)) || execution (* com.deskmedia.base.BaseService.*(..))";
+    private static final String pointcutExpression = "execution (* com.cooking.core..*(..)) || execution (* com.cooking.base.BaseService.*(..))";
 
     @Autowired
     private PlatformTransactionManager transactionManager;

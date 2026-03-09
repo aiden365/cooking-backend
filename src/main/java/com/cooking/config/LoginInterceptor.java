@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
@@ -19,7 +20,7 @@ import org.springframework.web.servlet.ModelAndView;
 public class LoginInterceptor implements HandlerInterceptor {
 
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private StringRedisTemplate stringRedisTemplate;
     @Autowired
     private UserService userService;
 
@@ -38,7 +39,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         StringBuffer requestURL = request.getRequestURL();
         log.info("preHandle请求URL：" + requestURL.toString());
         String token = request.getParameter("token");
-        Object object = redisTemplate.opsForValue().get(token);
+        Object object = stringRedisTemplate.opsForValue().get(token);
         if(object == null){
             throw new ApiException(BaseResponse.Code.user_wdl.code, "用户未登录");
         }

@@ -11,6 +11,7 @@ import com.cooking.core.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisKeyValueTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,7 +37,7 @@ public class UserApi extends BaseController {
     @Autowired
     private UserService userService;
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private StringRedisTemplate stringRedisTemplate;
 
     @PostMapping("list")
     public BaseResponse list(@RequestBody JSONObject params) {
@@ -72,7 +73,7 @@ public class UserApi extends BaseController {
             return fail("用户不存在");
         }
         String token = UUID.randomUUID().toString();
-        redisTemplate.opsForValue().set(token, userEntity.getId());
+        stringRedisTemplate.opsForValue().set(token, userEntity.getId().toString());
         JSONObject res = new JSONObject();
         res.put("user", userEntity);
         res.put("token", token);

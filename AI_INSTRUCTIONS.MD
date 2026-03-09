@@ -26,6 +26,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 |  |  |        ├── api                              # Spring Controller接口目录
 |  |  |        ├── base                             # 基础类和公共类目录
 |  |  |        ├── config                           # Spring及其他框架配置类目录   
+|  |  |        ├── dto                              # 数据对象存放目录
 |  |  |        ├── enums                            # 系统枚举类目录
 |  |  |        ├── exceptions                       # 系统异常类目录
 |  |  |        ├── core                             # 项目核心业务类目录
@@ -53,7 +54,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 用户菜品的收藏接口开发 (已完成)
     - [x] 用户菜品分享相关接口开发 (已完成)
     - [x] 用户菜品分享评论相关接口开发 (已完成)
-    - [ ] 用户营养目标相关接口开发 (当前进行)
+    - [x] 用户营养目标相关接口开发 (当前进行)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -64,12 +65,11 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 - [x] **阶段 3: 标签模块 (Lable Module)**
     - [x] 标签模块接口开发 (已完成)
 - [ ] **阶段 3: AI 对接模块 (AI Chat Module)**
-    - [ ] 集成 Spring AI 与 Ollama/Qwen
-    - [ ] 构建食谱推荐 Prompt 与上下文记忆
-    - [ ] 聊天接口封装 (流式输出)
+    - [x] 集成 Spring AI 与 Qwen (已完成)
+    - [ ] 菜谱智能生成接口开发 (当前进行)
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：** 请根据以下具体要求，为我生成代码。
-> 在`UserNutritionApi.java`中完成用户营养目标管理的添加、修改、删除接口开发。该功能主要是让用户设置自身每日的营养目标，为菜品的推荐提供依据。
+> 在`DishApi.java`中完成菜谱智能生成接口开发接口开发。该功能主要是让用户设置自身每日的营养目标，为菜品的推荐提供依据。
 > 对于添加接口和修改接口可以合并为一个save接口，接口接收id、用户id、营养元素名称、目标值参数。添加时请根据系统参数（SystemParamEnum.user_nutrition_limit）中配置的数量进行限制
 > 系统参数配置可通过SystemParamsService.findByName方法获取
