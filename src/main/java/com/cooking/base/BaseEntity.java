@@ -25,7 +25,7 @@ public class BaseEntity<T>  {
     /**
      * 创建人id
      */
-    @TableField(value = "create_user")
+    @TableField(value = "create_user", fill = FieldFill.INSERT)
     protected Long createUser;
 
     /**
@@ -37,7 +37,7 @@ public class BaseEntity<T>  {
     /**
      * 更新人id
      */
-    @TableField(value = "update_user")
+    @TableField(value = "update_user", fill = FieldFill.INSERT_UPDATE)
     protected Long updateUser;
 
     /**

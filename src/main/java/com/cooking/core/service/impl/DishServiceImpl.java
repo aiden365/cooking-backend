@@ -4,11 +4,20 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseServiceImpl;
 import com.cooking.core.entity.DishEntity;
+import com.cooking.core.entity.DishFlavorEntity;
+import com.cooking.core.entity.DishMaterialEntity;
+import com.cooking.core.entity.DishStepEntity;
 import com.cooking.core.mapper.DishMapper;
+import com.cooking.core.service.DishFlavorService;
+import com.cooking.core.service.DishMaterialService;
 import com.cooking.core.service.DishService;
+import com.cooking.core.service.DishStepService;
+import com.cooking.dto.AIRecipeDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +35,12 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
     @Autowired
     private DishMapper dishMapper;
+    @Autowired
+    private DishMaterialService dishMaterialService;
+    @Autowired
+    private DishFlavorService dishFlavorService;
+    @Autowired
+    private DishStepService dishStepService;
 
     @Override
     public List<DishEntity> findList(Map<String, Object> params) {
@@ -40,5 +55,79 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     @Override
     public void deleteByIds(Set<String> ids) {
 
+    }
+
+    @Override
+    public DishEntity saveAigcRecipe(AIRecipeDTO aiRecipeDTO) {
+        DishEntity existed = super.lambdaQuery().eq(DishEntity::getName, aiRecipeDTO.getDishName()).one();
+        if (existed != null) {
+            return existed;
+        }
+
+        DishEntity dishEntity = new DishEntity();
+        dishEntity.setName(aiRecipeDTO.getDishName());
+        dishEntity.setTakeTimes(aiRecipeDTO.getTakeTimes());
+        dishEntity.setTips(aiRecipeDTO.getTips());
+        dishEntity.setImgPath("");
+        dishEntity.setViewCount(0L);
+        dishEntity.setActiveVal(0);
+        dishEntity.setPopularVal(0);
+        super.save(dishEntity);
+
+        List<DishMaterialEntity> materials = new ArrayList<>();
+        if (aiRecipeDTO.getMaterials() != null) {
+            for (AIRecipeDTO.Materials material : aiRecipeDTO.getMaterials()) {
+                if (material == null || !StringUtils.hasText(material.getName())) {
+                    continue;
+                }
+                DishMaterialEntity entity = new DishMaterialEntity();
+                entity.setDishId(dishEntity.getId());
+                entity.setMaterialName(material.getName());
+                entity.setDosage(material.getDosage());
+                entity.setRemark(material.getDeal());
+                materials.add(entity);
+            }
+        }
+        if (!materials.isEmpty()) {
+            dishMaterialService.saveBatch(materials);
+        }
+
+        List<DishFlavorEntity> flavors = new ArrayList<>();
+        if (aiRecipeDTO.getFlavors() != null) {
+            for (AIRecipeDTO.Flavors flavor : aiRecipeDTO.getFlavors()) {
+                if (flavor == null || !StringUtils.hasText(flavor.getName())) {
+                    continue;
+                }
+                DishFlavorEntity entity = new DishFlavorEntity();
+                entity.setDishId(dishEntity.getId());
+                entity.setFlavorName(flavor.getName());
+                entity.setDosage(flavor.getDosage());
+                flavors.add(entity);
+            }
+        }
+        if (!flavors.isEmpty()) {
+            dishFlavorService.saveBatch(flavors);
+        }
+
+        List<DishStepEntity> steps = new ArrayList<>();
+        if (aiRecipeDTO.getSteps() != null) {
+            for (int i = 0; i < aiRecipeDTO.getSteps().size(); i++) {
+                AIRecipeDTO.Steps step = aiRecipeDTO.getSteps().get(i);
+                if (step == null || !StringUtils.hasText(step.getInstruction())) {
+                    continue;
+                }
+                DishStepEntity entity = new DishStepEntity();
+                entity.setDishId(dishEntity.getId());
+                entity.setStepDescribe(step.getInstruction());
+                entity.setSort(step.getStepNumber() == null ? (i + 1) : step.getStepNumber());
+                entity.setStepImages("[]");
+                steps.add(entity);
+            }
+        }
+        if (!steps.isEmpty()) {
+            dishStepService.saveBatch(steps);
+        }
+
+        return dishEntity;
     }
 }

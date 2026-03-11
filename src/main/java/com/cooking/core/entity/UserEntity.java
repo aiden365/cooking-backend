@@ -20,6 +20,8 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class UserEntity extends BaseEntity {
 
+    public static final Long super_admin_id = 1L;
+
     /**
      * 用户名
      */
@@ -39,10 +41,16 @@ public class UserEntity extends BaseEntity {
     private String userPass;
 
     /**
-     * 用户类型：1=普通用户，2=管理员用户
+     * 用户类型：1=普通用户，2=管理员用户,3=超级管理员用户
      */
     @TableField("type")
     private Integer type;
+
+    /**
+     * 用户状态：1=正常，2=待审核，3=禁用
+     */
+    @TableField("status")
+    private Integer status;
 
     /**
      * 用户年龄

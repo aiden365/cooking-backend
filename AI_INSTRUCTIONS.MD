@@ -78,3 +78,4 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 > 提取AI生成内容中的flavors字段，作为菜品的调料列表保存到数据库表 tbl_dish_flavor （该表对应的API、Service、mapper等基础代码未生成，请自行生成）
 > 提取AI生成内容中的steps字段，作为菜品制作步骤保存到数据库表 tbl_dish_step
 > 再将菜品保存到数据的同时使用DishApi.redisVectorStore将菜品名称和菜品作为一个整体保存到向量数据库中，方便后续通过菜品名或食材查询该菜谱
+> 请避免AI生成过慢导致数据库事物过长

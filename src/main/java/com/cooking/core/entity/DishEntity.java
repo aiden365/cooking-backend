@@ -45,6 +45,20 @@ public class DishEntity extends BaseEntity {
     private String takeTimes;
 
     /**
+     * 来源：1=手动添加，2=AI生成
+     */
+    @TableField("source_type")
+    private Integer sourceType;
+
+    /**
+     * 检查状态：1=未经人工检验，2=经过人工检验
+     */
+    @TableField("check_status")
+    private Integer checkStatus;
+
+
+
+    /**
      * 菜品浏览量
      */
     @TableField("view_count")

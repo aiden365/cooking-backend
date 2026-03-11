@@ -41,7 +41,8 @@ public class DishMaterialEntity extends BaseEntity {
     /**
      * 备注
      */
-    @TableField("remark")
+    @TableField("deal")
     private String remark;
 
 }
+
