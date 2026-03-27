@@ -55,7 +55,8 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 用户菜品的收藏接口开发 (已完成)
     - [x] 用户菜品分享相关接口开发 (已完成)
     - [x] 用户菜品分享评论相关接口开发 (已完成)
-    - [x] 用户营养目标相关接口开发 (当前进行)
+    - [x] 用户营养目标相关接口开发 (已完成)
+    - [ ] 用户注册接口实现 (当前进行)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -70,12 +71,9 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [ ] 菜谱智能生成接口开发 (当前进行)
 
 ## 5. 当前执行任务 (Current Task)
-> **开发者指令：** 请根据以下具体要求，为我生成代码。
-> 在`DishApi.java`中完成菜谱智能生成接口开发接口开发。该功能主要是让用户可以根据菜品名称生成菜品的制作过程，并将AI生成的内容保存到数据库中，方便下次查询。
-> 我已经完成了提示词及AI生成方法调用，AI响应的信息可以转换为AIRecipeDTO.java对象，请按照以下要求继续完成代码：
-> 提取AI生成内容中的name、take_times、tips字段，作为菜品信息保存到数据库，如果菜品名已存在则不进行后续操作
-> 提取AI生成内容中的materials字段，作为菜品制作步骤保存到数据库表 tbl_dish_material
-> 提取AI生成内容中的flavors字段，作为菜品的调料列表保存到数据库表 tbl_dish_flavor （该表对应的API、Service、mapper等基础代码未生成，请自行生成）
-> 提取AI生成内容中的steps字段，作为菜品制作步骤保存到数据库表 tbl_dish_step
-> 再将菜品保存到数据的同时使用DishApi.redisVectorStore将菜品名称和菜品作为一个整体保存到向量数据库中，方便后续通过菜品名或食材查询该菜谱
-> 请避免AI生成过慢导致数据库事物过长
+> **开发者指令：**
+> 现在，让我们开始`用户注册接口实现`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/UserApi.java现有的register接口中，实现用户注册功能。
+> 2：从前端接受用户的注册信息（username，password，email，emailCode）
+> 3：对emailCode进行验证，验证成功后，将用户信息保存到数据库中。
+> 4：在UserApi.java中添加发送邮箱验证码接口，接受email地址为参数，对用户输入的email地址进行简单的格式验证，并生成一个随机的6位数字验证码，发送给用户，验证码存储到redis中，有效期5分钟。

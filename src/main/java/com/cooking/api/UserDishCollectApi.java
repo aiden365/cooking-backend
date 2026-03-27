@@ -111,7 +111,7 @@ public class UserDishCollectApi extends BaseController {
                 .eq(UserDishCollectEntity::getDishId, dishId);
         UserDishCollectEntity collectEntity = userDishCollectService.getOne(wrapper);
         if (collectEntity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "收藏记录不存在");
+            return ok();
         }
 
         userDishCollectService.removeById(collectEntity.getId());

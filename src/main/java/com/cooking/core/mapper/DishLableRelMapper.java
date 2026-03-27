@@ -2,7 +2,7 @@ package com.cooking.core.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.cooking.core.entity.DishLableRelEntity;
+import com.cooking.core.entity.DishLabelRelEntity;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Map;
@@ -15,7 +15,7 @@ import java.util.Map;
  * @author aiden
  * @since 2026-03-04
  */
-public interface DishLableRelMapper extends BaseMapper<DishLableRelEntity> {
+public interface DishLableRelMapper extends BaseMapper<DishLabelRelEntity> {
 
-    IPage<DishLableRelEntity> findPage(IPage<DishLableRelEntity> page, @Param("params") Map<String, Object> params);
+    IPage<DishLabelRelEntity> findPage(IPage<DishLabelRelEntity> page, @Param("params") Map<String, Object> params);
 }

@@ -1,6 +1,9 @@
 package com.cooking.api;
 
 import cn.hutool.core.lang.UUID;
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.crypto.digest.MD5;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,9 +11,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.UserEntity;
 import com.cooking.core.service.UserService;
+import com.cooking.dto.UserEmailCodeDTO;
+import com.cooking.dto.UserRegisterDTO;
+import com.cooking.utils.EmailUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisKeyValueTemplate;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +25,7 @@ import com.cooking.base.BaseController;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -34,10 +39,15 @@ import java.util.Map;
 @RequestMapping("user")
 public class UserApi extends BaseController {
 
+    private static final String EMAIL_CODE_KEY_PREFIX = "user:register:emailCode:";
+    private static final int EMAIL_CODE_EXPIRE_MINUTES = 5;
+
     @Autowired
     private UserService userService;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private EmailUtils emailUtils;
 
     @PostMapping("list")
     public BaseResponse list(@RequestBody JSONObject params) {
@@ -81,18 +91,67 @@ public class UserApi extends BaseController {
     }
 
     @PostMapping("register")
-    public BaseResponse register(@RequestBody UserEntity userEntity) {
-        UserEntity existUserEntity = userService.lambdaQuery().eq(UserEntity::getUserCode, userEntity.getUserCode()).list().stream().findAny().orElse(null);
-        if(existUserEntity != null){
-            return fail("用户已存在");
+    public BaseResponse register(@RequestBody UserRegisterDTO params) {
+        String username = StrUtil.trim(params.getUsername());
+        String password = params.getPassword();
+        String email = StrUtil.trim(params.getEmail());
+        String emailCode = StrUtil.trim(params.getEmailCode());
+
+        if (StrUtil.hasBlank(username, password, email, emailCode)) {
+            return fail("注册参数不完整");
         }
-        userEntity.setUserPass(MD5.create().digestHex(userEntity.getUserPass()));
-        userService.saveOrUpdate(userEntity);
+        if (!isValidEmail(email)) {
+            return fail("邮箱格式不正确");
+        }
+
+        String redisKey = buildEmailCodeKey(email);
+        String cachedCode = stringRedisTemplate.opsForValue().get(redisKey);
+        if (!StrUtil.equals(cachedCode, emailCode)) {
+            return fail("邮箱验证码错误或已过期");
+        }
+
+        UserEntity existUserEntity = userService.lambdaQuery().and(wrapper -> wrapper.eq(UserEntity::getUserCode, email).or().eq(UserEntity::getEmail, email)).list().stream().findAny().orElse(null);
+        if (existUserEntity != null) {
+            return fail("该邮箱已注册");
+        }
+
+        UserEntity userEntity = new UserEntity();
+        userEntity.setUserName(username);
+        userEntity.setUserCode(email);
+        userEntity.setEmail(email);
+        userEntity.setUserPass(MD5.create().digestHex(password));
+        userEntity.setType(1);
+        userEntity.setStatus(1);
+        userService.save(userEntity);
+        stringRedisTemplate.delete(redisKey);
+
         String token = UUID.randomUUID().toString();
+        stringRedisTemplate.opsForValue().set(token, userEntity.getId().toString(), 1, TimeUnit.HOURS);
         JSONObject res = new JSONObject();
         res.put("user", userEntity);
         res.put("token", token);
         return ok(res);
+    }
+
+    @PostMapping("sendEmailCode")
+    public BaseResponse sendEmailCode(@RequestBody UserEmailCodeDTO params) {
+        String email = StrUtil.trim(params.getEmail());
+        if (StrUtil.isBlank(email)) {
+            return fail("邮箱不能为空");
+        }
+        if (!isValidEmail(email)) {
+            return fail("邮箱格式不正确");
+        }
+
+        UserEntity existUserEntity = userService.lambdaQuery().and(wrapper -> wrapper.eq(UserEntity::getUserCode, email).or().eq(UserEntity::getEmail, email)).list().stream().findAny().orElse(null);
+        if (existUserEntity != null) {
+            return fail("该邮箱已注册");
+        }
+
+        String emailCode = RandomUtil.randomNumbers(6);
+        emailUtils.sendVerificationCodeEmail(email, emailCode, EMAIL_CODE_EXPIRE_MINUTES);
+        stringRedisTemplate.opsForValue().set(buildEmailCodeKey(email),emailCode,EMAIL_CODE_EXPIRE_MINUTES,TimeUnit.MINUTES);
+        return ok("验证码已发送");
     }
 
     @PostMapping("edit")
@@ -104,6 +163,14 @@ public class UserApi extends BaseController {
 
         userService.saveOrUpdate(userEntity);
         return ok(userEntity);
+    }
+
+    private boolean isValidEmail(String email) {
+        return ReUtil.isMatch("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$", email);
+    }
+
+    private String buildEmailCodeKey(String email) {
+        return EMAIL_CODE_KEY_PREFIX + email.toLowerCase();
     }
 
 }

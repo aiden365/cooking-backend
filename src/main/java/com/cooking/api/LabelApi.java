@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.DishEntity;
-import com.cooking.core.entity.DishLableRelEntity;
+import com.cooking.core.entity.DishLabelRelEntity;
 import com.cooking.core.entity.LabelEntity;
 import com.cooking.core.entity.UserEntity;
 import com.cooking.core.entity.UserLabelRelEntity;
@@ -113,7 +113,7 @@ public class LabelApi extends BaseController {
         }
 
         userLabelRelService.remove(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getLableId, id));
-        dishLableRelService.remove(new LambdaQueryWrapper<DishLableRelEntity>().eq(DishLableRelEntity::getLableId, id));
+        dishLableRelService.remove(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getLableId, id));
         labelService.removeById(id);
         return ok();
     }
@@ -154,10 +154,10 @@ public class LabelApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "该标签不是菜品标签");
         }
 
-        LambdaQueryWrapper<DishLableRelEntity> wrapper = new LambdaQueryWrapper<DishLableRelEntity>().eq(DishLableRelEntity::getDishId, dishId).eq(DishLableRelEntity::getLableId, labelId);
-        DishLableRelEntity relEntity = dishLableRelService.getOne(wrapper);
+        LambdaQueryWrapper<DishLabelRelEntity> wrapper = new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLableId, labelId);
+        DishLabelRelEntity relEntity = dishLableRelService.getOne(wrapper);
         if (relEntity == null) {
-            relEntity = new DishLableRelEntity().setDishId(dishId).setLableId(labelId);
+            relEntity = new DishLabelRelEntity().setDishId(dishId).setLableId(labelId);
             dishLableRelService.save(relEntity);
         }
         return ok(relEntity);
@@ -169,7 +169,7 @@ public class LabelApi extends BaseController {
         Long labelId = params.getLong("labelId");
         validateDishLabelRel(dishId, labelId);
 
-        dishLableRelService.remove(new LambdaQueryWrapper<DishLableRelEntity>().eq(DishLableRelEntity::getDishId, dishId).eq(DishLableRelEntity::getLableId, labelId));
+        dishLableRelService.remove(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLableId, labelId));
         return ok();
     }
 

@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.cooking.base.BaseEntity;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.experimental.FieldNameConstants;
+
+import java.util.List;
 
 
 /**
@@ -16,6 +19,7 @@ import lombok.experimental.Accessors;
  * @since 2026-03-04
  */
 @Data
+@FieldNameConstants
 @Accessors(chain = true)
 @TableName("tbl_dish_comment")
 public class DishCommentEntity extends BaseEntity {
@@ -49,5 +53,11 @@ public class DishCommentEntity extends BaseEntity {
      */
     @TableField(exist = false)
     private String userName;
+
+    /**
+     * 子评论列表
+     */
+    @TableField(exist = false)
+    private List<DishCommentEntity> childCommentList;
 
 }

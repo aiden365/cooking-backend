@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.cooking.base.BaseEntity;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.experimental.FieldNameConstants;
 
 
 /**
@@ -16,9 +17,10 @@ import lombok.experimental.Accessors;
  * @since 2026-03-04
  */
 @Data
+@FieldNameConstants
 @Accessors(chain = true)
-@TableName("tbl_dish_lable_rel")
-public class DishLableRelEntity extends BaseEntity {
+@TableName("tbl_dish_label_rel")
+public class DishLabelRelEntity extends BaseEntity {
 
     /**
      * 菜品ID
@@ -29,6 +31,14 @@ public class DishLableRelEntity extends BaseEntity {
     /**
      * 标签ID
      */
-    @TableField("lable_id")
-    private Long lableId;
+    @TableField("label_id")
+    private Long labelId;
+
+    /**
+     * 标签名
+     */
+    @TableField(exist = false)
+    private String labelName;
+
+
 }

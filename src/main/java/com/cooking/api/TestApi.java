@@ -1,6 +1,10 @@
 package com.cooking.api;
 
 import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.util.RandomUtil;
+import com.cooking.base.BaseController;
+import com.cooking.base.BaseResponse;
+import com.cooking.utils.EmailUtils;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -17,6 +21,7 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingResponse;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,8 +38,8 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("test")
-public class TestApi {
+@RequestMapping()
+public class TestApi extends BaseController {
 
     @Resource(name = "deepseek")
     private ChatModel deepseekChatModel;
@@ -67,6 +72,8 @@ public class TestApi {
     private EmbeddingModel qwenEmbedding;
     @Resource(name = "redisVectorStore")
     private VectorStore redisVectorStore;
+    @Autowired
+    EmailUtils emailUtils;
 
 
 
@@ -214,5 +221,15 @@ public class TestApi {
         List<Document> documents = redisVectorStore.similaritySearch(searchRequest);
         return documents;
     }
+
+    @GetMapping("test10")
+    public BaseResponse test10() {
+
+        String randomNumbers = RandomUtil.randomNumbers(6);
+        emailUtils.sendVerificationCodeEmail("chenjiacheng365@qq.com", randomNumbers, 5);
+        return ok();
+    }
+
+
 
 }

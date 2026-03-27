@@ -7,13 +7,14 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
+import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseResponse;
-import com.cooking.core.entity.DishEntity;
-import com.cooking.core.service.DishService;
+import com.cooking.core.entity.*;
+import com.cooking.core.service.*;
 import com.cooking.dto.AIRecipeDTO;
 import com.cooking.exceptions.ApiException;
+import com.cooking.utils.SystemContextHelper;
 import jakarta.annotation.Resource;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
@@ -31,7 +32,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -55,6 +55,16 @@ public class DishApi extends BaseController {
 
     @Autowired
     private DishService dishService;
+    @Autowired
+    private LabelService labelService;
+    @Autowired
+    private DishLableRelService dishLableRelService;
+    @Autowired
+    private UserDishCollectService userDishCollectService;
+    @Autowired
+    private UserShareService userShareService;
+
+
 
     @Resource(name = "qwen")
     private ChatModel qwenChatModel;
@@ -76,13 +86,38 @@ public class DishApi extends BaseController {
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
         String search = params.getString("search");
-        Long dishId = params.getLong("dishId");
+        List<Long> dishIds = params.getList("dishId", Long.class);
+        Long labelId = params.getLong("labelId");
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("search", search);
-        queryParams.put("dishId", dishId);
+        queryParams.put("dishIds", dishIds);
+        queryParams.put("labelId", labelId);
 
-        IPage<DishEntity> entityIPage = dishService.findPage(new Page<>(pageNo, pageSize), queryParams);
-        return ok(entityIPage);
+        IPage<DishEntity> dishEntityPage = dishService.findPage(new Page<>(pageNo, pageSize), queryParams);
+        List<Long> dishEntityIds = dishEntityPage.getRecords().stream().map(BaseEntity::getId).toList();
+
+        Map<Long, DishLabelRelEntity> labelRelEntityMap = dishLableRelService.findMapByField(DishLabelRelEntity.Fields.dishId, dishEntityIds);
+        Map<Long, LabelEntity> labelMap = labelService.findMapByIds(labelRelEntityMap.values().stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet()));
+        labelRelEntityMap.values().stream().filter(rel -> labelMap.containsKey(rel.getLabelId())).forEach(rel -> {
+            rel.setLabelName(labelMap.get(rel.getLabelId()).getLableName());
+        });
+        dishEntityPage.getRecords().forEach(dish -> {
+            List<DishLabelRelEntity> relEntities = labelRelEntityMap.values().stream().filter(rel -> rel.getDishId().equals(dish.getId())).toList();
+            dish.setLabelList(relEntities.stream().map(DishLabelRelEntity::getLabelName).toList());
+        });
+
+        Map<Long, UserDishCollectEntity> dishCollectMap = userDishCollectService.findMapByField(UserDishCollectEntity.Fields.dishId, dishEntityIds);
+        dishEntityPage.getRecords().forEach(dish -> {
+            dish.setCollectCount(dishCollectMap.values().stream().filter(collect -> collect.getDishId().equals(dish.getId())).count());
+        });
+
+        Map<Long, UserShareEntity> userShareMap = userShareService.findMapByField(UserShareEntity.Fields.dishId, dishEntityIds);
+        dishEntityPage.getRecords().forEach(dish -> {
+            dish.setShareCount(userShareMap.values().stream().filter(share -> share.getDishId().equals(dish.getId())).count());
+        });
+
+
+        return ok(dishEntityPage);
     }
 
     @PostMapping("search")
@@ -91,6 +126,19 @@ public class DishApi extends BaseController {
         SearchRequest searchRequest = SearchRequest.builder().query(search).topK(2).build();
         List<Document> documents = redisVectorStore.similaritySearch(searchRequest);
         return ok(documents);
+    }
+
+    @PostMapping("detail")
+    public BaseResponse detail(@RequestBody JSONObject params) {
+        Long dishId = params.getLong("dishId");
+
+        if(!BaseEntity.validId(dishId)){
+            return fail("菜谱ID不能为空");
+        }
+        DishEntity dishEntity = dishService.getById(dishId);
+        Long count = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getDishId, dishId).eq(UserDishCollectEntity::getUserId, SystemContextHelper.getCurrentUser().getId()).count();
+        dishEntity.setUserCollected(count > 0);
+        return ok();
     }
 
     /**

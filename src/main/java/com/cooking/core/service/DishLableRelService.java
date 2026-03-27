@@ -2,7 +2,7 @@ package com.cooking.core.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
-import com.cooking.core.entity.DishLableRelEntity;
+import com.cooking.core.entity.DishLabelRelEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -16,11 +16,11 @@ import java.util.Set;
  * @author aiden
  * @since 2026-03-04
  */
-public interface DishLableRelService extends BaseService<DishLableRelEntity> {
+public interface DishLableRelService extends BaseService<DishLabelRelEntity> {
 
-    List<DishLableRelEntity> findList(Map<String, Object> params);
+    List<DishLabelRelEntity> findList(Map<String, Object> params);
 
-    IPage<DishLableRelEntity> findPage(IPage<DishLableRelEntity> page, Map<String, Object> params);
+    IPage<DishLabelRelEntity> findPage(IPage<DishLabelRelEntity> page, Map<String, Object> params);
 
     void deleteByIds(Set<String> ids);
 }

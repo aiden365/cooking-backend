@@ -4,6 +4,18 @@
 
     <select id="findPage" resultType="com.cooking.core.entity.DishEntity">
         select * from tbl_dish where 1=1
+        <if test="params.dishIds != null and params.dishIds.size() > 0">
+            and id in
+            <foreach item="item" collection="params.dishIds" separator="," open="(" close=")" index="">
+                #{item}
+            </foreach>
+        </if>
+        <if test="params.search != null">
+            and name like concat('%',#{params.search},'%')
+        </if>
+        <if test="params.name != null">
+            and exists(select 1 from tbl_dish_label_rel where dish_id = tbl_dish.id and label_id = #{params.labelId})
+        </if>
         order by create_time desc
     </select>
 </mapper>

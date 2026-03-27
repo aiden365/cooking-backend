@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.cooking.base.BaseEntity;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.experimental.FieldNameConstants;
+
+import java.util.List;
 
 
 /**
@@ -16,6 +19,7 @@ import lombok.experimental.Accessors;
  * @since 2026-03-04
  */
 @Data
+@FieldNameConstants
 @TableName("tbl_dish")
 @Accessors(chain = true)
 public class DishEntity extends BaseEntity {
@@ -75,6 +79,30 @@ public class DishEntity extends BaseEntity {
      */
     @TableField("popular_val")
     private Integer popularVal;
+
+    /**
+     * 菜谱标签
+     */
+    @TableField(exist = false)
+    private List<String> labelList;
+
+    /**
+     * 菜谱收藏量
+     */
+    @TableField(exist = false)
+    private Long collectCount;
+
+    /**
+     * 菜谱分享量
+     */
+    @TableField(exist = false)
+    private Long shareCount;
+
+    /**
+     * 当前用户是否已收藏
+     */
+    @TableField(exist = false)
+    private Boolean userCollected;
 
 
 }
