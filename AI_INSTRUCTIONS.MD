@@ -9,7 +9,7 @@
 - **持久层框架:** MyBatis-Plus
 - **数据库:** MySQL 8.x
 - **AI 接入方案:** Spring AI 结合本地/远端部署的 Ollama (调用 Qwen 通义千问模型)
-- **构建工具:** Maven
+- **构建工具:** Maven 请直接使用系统的maven进行构建任务，不要使用项目中的mvnw（我已移除了项目中的mvnw.cmd）
 
 ## 3. 目录结构与分层规范
 本项目采用标准的 Controller-Service-DAO 三层架构，并严格区分数据传输对象。请将生成的代码放入正确的包路径下：

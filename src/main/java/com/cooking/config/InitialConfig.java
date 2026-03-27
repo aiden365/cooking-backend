@@ -26,6 +26,7 @@ public class InitialConfig implements ApplicationRunner {
             userEntity.setUserCode("admin");
             userEntity.setUserName("超级管理员");
             userEntity.setUserPass(MD5.create().digestHex("admin"));
+            userEntity.setStatus(1);
             userEntity.setCreateUser(UserEntity.super_admin_id);
             userEntity.setUpdateUser(UserEntity.super_admin_id);
             userEntity.setDeleted(0);

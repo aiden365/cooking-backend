@@ -187,7 +187,10 @@ DROP TABLE IF EXISTS `tbl_system_params`;
 CREATE TABLE `tbl_system_params`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `param_name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '参数名',
+  `param_icon` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数图标',
+  `param_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数编号',
   `param_value` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数值',
+  `param_describe` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数描述',
   `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
   `update_time` datetime NULL DEFAULT NULL COMMENT '修改时间',
   `update_user` bigint(20) NULL DEFAULT NULL COMMENT '修改人',
@@ -320,5 +323,24 @@ CREATE TABLE `tbl_user_share_comment`  (
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户分享评论表' ROW_FORMAT = Dynamic;
+
+
+
+-- ----------------------------
+-- Table structure for tbl_user_private_dish
+-- ----------------------------
+DROP TABLE IF EXISTS `tbl_user_private_dish`;
+CREATE TABLE `tbl_user_private_dish`  (
+    `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` bigint(20) NOT NULL COMMENT '用户ID',
+    `dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
+    `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '分享描述',
+    `create_time` datetime NOT NULL COMMENT '创建时间',
+    `create_user` bigint(20) NOT NULL COMMENT '创建人',
+    `update_time` datetime NOT NULL COMMENT '修改时间',
+    `update_user` bigint(20) NOT NULL COMMENT '修改人',
+    `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
+    PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户私房菜' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
