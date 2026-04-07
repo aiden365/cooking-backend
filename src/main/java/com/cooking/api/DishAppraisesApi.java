@@ -49,12 +49,14 @@ public class DishAppraisesApi extends BaseController {
 
         String search = params.getString("search");
         Long dishId = params.getLong("dishId");
+        Long userId = params.getLong("userId");
 
         IPage<DishAppraisesEntity> page = new Page<>(pageNo, pageSize);
 
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("search", search);
         queryParams.put("dishId", dishId);
+        queryParams.put("userId", userId);
         IPage<DishAppraisesEntity> entityIPage = dishAppraisesService.findPage(page, params);
         return ok(entityIPage);
     }

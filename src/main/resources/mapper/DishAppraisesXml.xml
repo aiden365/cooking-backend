@@ -4,9 +4,13 @@
 
     <select id="findPage" resultType="com.cooking.core.entity.DishAppraisesEntity">
         select * from tbl_dish_appraises where 1=1
+        <if test="params.userId != null">
+            and user_id = #{params.userId}
+        </if>
         <if test="params.dishId != null">
             and dish_id = #{params.dishId}
         </if>
+
         order by create_time desc
     </select>
 </mapper>

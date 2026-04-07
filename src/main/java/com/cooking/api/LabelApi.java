@@ -112,8 +112,8 @@ public class LabelApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "标签不存在");
         }
 
-        userLabelRelService.remove(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getLableId, id));
-        dishLableRelService.remove(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getLableId, id));
+        userLabelRelService.remove(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getLabelId, id));
+        dishLableRelService.remove(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getLabelId, id));
         labelService.removeById(id);
         return ok();
     }
@@ -127,10 +127,10 @@ public class LabelApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "该标签不是用户标签");
         }
 
-        LambdaQueryWrapper<UserLabelRelEntity> wrapper = new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId).eq(UserLabelRelEntity::getLableId, labelId);
+        LambdaQueryWrapper<UserLabelRelEntity> wrapper = new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId).eq(UserLabelRelEntity::getLabelId, labelId);
         UserLabelRelEntity relEntity = userLabelRelService.getOne(wrapper);
         if (relEntity == null) {
-            relEntity = new UserLabelRelEntity().setUserId(userId).setLableId(labelId);
+            relEntity = new UserLabelRelEntity().setUserId(userId).setLabelId(labelId);
             userLabelRelService.save(relEntity);
         }
         return ok(relEntity);
@@ -141,7 +141,7 @@ public class LabelApi extends BaseController {
         Long userId = params.getLong("userId");
         Long labelId = params.getLong("labelId");
         validateUserLabelRel(userId, labelId);
-        userLabelRelService.remove(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId).eq(UserLabelRelEntity::getLableId, labelId));
+        userLabelRelService.remove(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId).eq(UserLabelRelEntity::getLabelId, labelId));
         return ok();
     }
 
@@ -154,10 +154,10 @@ public class LabelApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "该标签不是菜品标签");
         }
 
-        LambdaQueryWrapper<DishLabelRelEntity> wrapper = new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLableId, labelId);
+        LambdaQueryWrapper<DishLabelRelEntity> wrapper = new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLabelId, labelId);
         DishLabelRelEntity relEntity = dishLableRelService.getOne(wrapper);
         if (relEntity == null) {
-            relEntity = new DishLabelRelEntity().setDishId(dishId).setLableId(labelId);
+            relEntity = new DishLabelRelEntity().setDishId(dishId).setLabelId(labelId);
             dishLableRelService.save(relEntity);
         }
         return ok(relEntity);
@@ -169,7 +169,7 @@ public class LabelApi extends BaseController {
         Long labelId = params.getLong("labelId");
         validateDishLabelRel(dishId, labelId);
 
-        dishLableRelService.remove(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLableId, labelId));
+        dishLableRelService.remove(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLabelId, labelId));
         return ok();
     }
 

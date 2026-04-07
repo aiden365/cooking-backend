@@ -32,5 +32,5 @@ public class UserLabelRelEntity extends BaseEntity {
      * 标签ID
      */
     @TableField("lable_id")
-    private Long lableId;
+    private Long labelId;
 }
