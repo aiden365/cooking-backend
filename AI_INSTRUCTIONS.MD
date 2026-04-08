@@ -47,7 +47,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 - [x] **阶段 0: 基础设施搭建**
     - [x] Spring Boot + MyBatis-Plus 框架搭建 (已完成)
     - [x] 各数据库表的查询代码生成，方便后续开发 (已完成)
-    - [ ] 通用文件上传接口实现（当前进行）
+    - [ ] 通用文件上传接口实现（已完成）
 - [x] **阶段 1: 用户模块 (User Module)**
     - [x] 数据库 user 表设计与 Entity 生成 (已完成)
     - [x] 登录/注册接口开发 (包含密码加密) (已完成)
@@ -67,14 +67,16 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 菜品制作步骤管理接口开发 (已完成)
 - [x] **阶段 3: 标签模块 (Lable Module)**
     - [x] 标签模块接口开发 (已完成)
-- [ ] **阶段 3: AI 对接模块 (AI Chat Module)**
+- [x] **阶段 4: 知识库模块 (Lable Module)**
+  - [x] 保存知识库接口开发 (已完成)
+  - [ ] 删除知识库接口开发 (当前进行)
+- [ ] **阶段 5: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
     - [ ] 菜谱智能生成接口开发 (已暂停)
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`通用文件上传接口实现`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/FileApi.java中实现，添加一个upload接口，接受文件上传请求。
-> 2：上传的文件存储在application.properties中配置的upload.path路径下。
-> 3：对文件进行分类存储，根据接口的参数决定文件的存储路径（PathEnum.java）。
-> 4：进行必要的参数验证，与友好提示。
+> 现在，让我们开始`删除知识库接口开发`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/RepositoryApi.java中实现，添加delete接口
+> 2：接口接收 id列表 为参数 
+> 3：进行必要的参数验证，与友好提示。

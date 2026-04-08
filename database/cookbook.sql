@@ -1,18 +1,4 @@
-/*
- Navicat Premium Data Transfer
 
- Source Server         : 本机
- Source Server Type    : MySQL
- Source Server Version : 50710 (5.7.10)
- Source Host           : localhost:3306
- Source Schema         : cookbook
-
- Target Server Type    : MySQL
- Target Server Version : 50710 (5.7.10)
- File Encoding         : 65001
-
- Date: 10/02/2026 18:39:08
-*/
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -38,7 +24,7 @@ CREATE TABLE `tbl_dish`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_dish_appraises
@@ -57,7 +43,7 @@ CREATE TABLE `tbl_dish_appraises`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品评价表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品评价表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_dish_comment
@@ -75,23 +61,40 @@ CREATE TABLE `tbl_dish_comment`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品评论表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品评论表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for tbl_dish_lable_rel
+-- Table structure for tbl_dish_flavors
 -- ----------------------------
-DROP TABLE IF EXISTS `tbl_dish_lable_rel`;
-CREATE TABLE `tbl_dish_lable_rel`  (
+DROP TABLE IF EXISTS `tbl_dish_flavors`;
+CREATE TABLE `tbl_dish_flavors`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `dish_id` bigint(255) NOT NULL COMMENT '菜品ID',
-  `lable_id` bigint(20) NOT NULL COMMENT '标签ID',
+  `dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
+  `flavor_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '调料名称',
+  `dosage` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '调料用量',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
   `update_time` datetime NOT NULL COMMENT '修改时间',
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品标签关联表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品调料表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for tbl_dish_label_rel
+-- ----------------------------
+DROP TABLE IF EXISTS `tbl_dish_label_rel`;
+CREATE TABLE `tbl_dish_label_rel`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `dish_id` bigint(255) NOT NULL COMMENT '菜品ID',
+  `label_id` bigint(20) NOT NULL COMMENT '标签ID',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `create_user` bigint(20) NOT NULL COMMENT '创建人',
+  `update_time` datetime NOT NULL COMMENT '修改时间',
+  `update_user` bigint(20) NOT NULL COMMENT '修改人',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品标签关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_dish_material
@@ -102,32 +105,14 @@ CREATE TABLE `tbl_dish_material`  (
   `dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
   `material_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '食材名称',
   `dosage` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '食材用量',
-  `deal` varchar(255) NOT NULL COMMENT '备注',
+  `deal` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '备注',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
   `update_time` datetime NOT NULL COMMENT '修改时间',
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品食材表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for tbl_dish_flavors
--- ----------------------------
-DROP TABLE IF EXISTS `tbl_dish_flavors`;
-CREATE TABLE `tbl_dish_flavors`  (
-`id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-`dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
-`flavor_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '调料名称',
-`dosage` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '调料用量',
-`create_time` datetime NOT NULL COMMENT '创建时间',
-`create_user` bigint(20) NOT NULL COMMENT '创建人',
-`update_time` datetime NOT NULL COMMENT '修改时间',
-`update_user` bigint(20) NOT NULL COMMENT '修改人',
-`deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
-PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品调料表' ROW_FORMAT = Dynamic;
-
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品食材表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_dish_step
@@ -137,7 +122,7 @@ CREATE TABLE `tbl_dish_step`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `dish_id` bigint(20) NOT NULL COMMENT '菜谱ID',
   `step_describe` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '步骤描述',
-  `step_images` text COMMENT '步骤图示，以JSON数组格式存储，如：["图片1","图片2","图片3"]',
+  `step_images` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '步骤图示，以JSON数组格式存储，如：[\"图片1\",\"图片2\",\"图片3\"]',
   `sort` int(11) NOT NULL COMMENT '步骤序号',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
@@ -145,7 +130,7 @@ CREATE TABLE `tbl_dish_step`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品制作步骤表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜品制作步骤表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_label
@@ -161,7 +146,23 @@ CREATE TABLE `tbl_label`  (
   `update_user` bigint(20) NULL DEFAULT NULL COMMENT '修改人',
   `deleted` bit(1) NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户标签表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户标签表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for tbl_nutrition
+-- ----------------------------
+DROP TABLE IF EXISTS `tbl_nutrition`;
+CREATE TABLE `tbl_nutrition`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '营养名称',
+  `default_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '默认值',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `create_user` bigint(20) NOT NULL COMMENT '创建人',
+  `update_time` datetime NOT NULL COMMENT '修改时间',
+  `update_user` bigint(20) NOT NULL COMMENT '修改人',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '营养表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_repository
@@ -170,15 +171,16 @@ DROP TABLE IF EXISTS `tbl_repository`;
 CREATE TABLE `tbl_repository`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '名称',
-  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
-  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件地址',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '描述',
+  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件地址',
+  `type` int(11) NOT NULL COMMENT '知识类型，1：菜谱知识，2：营养知识',
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
   `update_time` datetime NULL DEFAULT NULL COMMENT '修改时间',
   `update_user` bigint(20) NULL DEFAULT NULL COMMENT '修改人',
   `deleted` bit(1) NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '知识库表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '知识库表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_system_params
@@ -187,16 +189,13 @@ DROP TABLE IF EXISTS `tbl_system_params`;
 CREATE TABLE `tbl_system_params`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `param_name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '参数名',
-  `param_icon` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数图标',
-  `param_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数编号',
   `param_value` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数值',
-  `param_describe` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数描述',
   `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
   `update_time` datetime NULL DEFAULT NULL COMMENT '修改时间',
   `update_user` bigint(20) NULL DEFAULT NULL COMMENT '修改人',
   `deleted` bit(1) NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '系统参数表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '系统参数表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_user
@@ -213,13 +212,15 @@ CREATE TABLE `tbl_user`  (
   `gender` int(11) NULL DEFAULT NULL COMMENT '用户性别',
   `stature` int(11) NULL DEFAULT NULL COMMENT '用户身高',
   `weight` int(11) NULL DEFAULT NULL COMMENT '用户体重，单位KG',
+  `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '用户邮件',
+  `check_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '审核备注',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
   `update_time` datetime NOT NULL COMMENT '修改时间',
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_user_diet_record
@@ -237,7 +238,7 @@ CREATE TABLE `tbl_user_diet_record`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户饮食记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户饮食记录表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_user_dish_collect
@@ -253,7 +254,24 @@ CREATE TABLE `tbl_user_dish_collect`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户菜品收藏表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户菜品收藏表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for tbl_user_individual_dish
+-- ----------------------------
+DROP TABLE IF EXISTS `tbl_user_individual_dish`;
+CREATE TABLE `tbl_user_individual_dish`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
+  `dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '菜谱内容',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `create_user` bigint(20) NOT NULL COMMENT '创建人',
+  `update_time` datetime NOT NULL COMMENT '修改时间',
+  `update_user` bigint(20) NOT NULL COMMENT '修改人',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户个性化菜谱' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_user_label_rel
@@ -269,7 +287,7 @@ CREATE TABLE `tbl_user_label_rel`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户标签关联表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户标签关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_user_nutrition
@@ -286,7 +304,24 @@ CREATE TABLE `tbl_user_nutrition`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户营养标准表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户营养标准表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for tbl_user_nutrition_rel
+-- ----------------------------
+DROP TABLE IF EXISTS `tbl_user_nutrition_rel`;
+CREATE TABLE `tbl_user_nutrition_rel`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
+  `nutrition_id` bigint(20) NOT NULL COMMENT '营养ID',
+  `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '目标值',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `create_user` bigint(20) NOT NULL COMMENT '创建人',
+  `update_time` datetime NOT NULL COMMENT '修改时间',
+  `update_user` bigint(20) NOT NULL COMMENT '修改人',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户营养关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_user_share
@@ -304,7 +339,7 @@ CREATE TABLE `tbl_user_share`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户菜品分享表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户菜品分享表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tbl_user_share_comment
@@ -322,25 +357,6 @@ CREATE TABLE `tbl_user_share_comment`  (
   `update_user` bigint(20) NOT NULL COMMENT '修改人',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户分享评论表' ROW_FORMAT = Dynamic;
-
-
-
--- ----------------------------
--- Table structure for tbl_user_private_dish
--- ----------------------------
-DROP TABLE IF EXISTS `tbl_user_private_dish`;
-CREATE TABLE `tbl_user_private_dish`  (
-    `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `user_id` bigint(20) NOT NULL COMMENT '用户ID',
-    `dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
-    `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '分享描述',
-    `create_time` datetime NOT NULL COMMENT '创建时间',
-    `create_user` bigint(20) NOT NULL COMMENT '创建人',
-    `update_time` datetime NOT NULL COMMENT '修改时间',
-    `update_user` bigint(20) NOT NULL COMMENT '修改人',
-    `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
-    PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户私房菜' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户分享评论表' ROW_FORMAT = DYNAMIC;
 
 SET FOREIGN_KEY_CHECKS = 1;

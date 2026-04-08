@@ -6,12 +6,17 @@ import com.cooking.base.BaseServiceImpl;
 import com.cooking.core.entity.RepositoryEntity;
 import com.cooking.core.mapper.RepositoryMapper;
 import com.cooking.core.service.RepositoryService;
+import jakarta.annotation.Resource;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -39,6 +44,6 @@ public class RepositoryServiceImpl extends BaseServiceImpl<RepositoryMapper, Rep
 
     @Override
     public void deleteByIds(Set<String> ids) {
-
+        removeByIds(ids);
     }
 }

@@ -39,4 +39,10 @@ public class RepositoryEntity extends BaseEntity {
      */
     @TableField("file_path")
     private String filePath;
+
+    /**
+     * 知识类型，1：菜谱知识，2：营养知识
+     */
+    @TableField("type")
+    private Integer type;
 }

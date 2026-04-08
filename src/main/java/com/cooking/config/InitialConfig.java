@@ -23,6 +23,7 @@ public class InitialConfig implements ApplicationRunner {
         UserEntity userEntity = Optional.ofNullable(userService.getById(UserEntity.super_admin_id)).orElseGet(UserEntity::new);
         //初始化超级管理员用户
         if(userEntity.getId() == null){
+            userEntity.setId(UserEntity.super_admin_id);
             userEntity.setUserCode("admin");
             userEntity.setUserName("超级管理员");
             userEntity.setUserPass(MD5.create().digestHex("admin"));

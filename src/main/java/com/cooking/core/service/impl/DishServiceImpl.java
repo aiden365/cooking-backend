@@ -68,6 +68,8 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         dishEntity.setName(aiRecipeDTO.getDishName());
         dishEntity.setTakeTimes(aiRecipeDTO.getTakeTimes());
         dishEntity.setTips(aiRecipeDTO.getTips());
+        dishEntity.setSourceType(2);
+        dishEntity.setCheckStatus(1);
         dishEntity.setImgPath("");
         dishEntity.setViewCount(0L);
         dishEntity.setActiveVal(0);

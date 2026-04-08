@@ -11,6 +11,8 @@ public class AIRecipeDTO {
 
     @JsonPropertyDescription("状态标识：成功返回 'success'，若食材非法或逻辑错误则返回 'error'")
     private String status;
+    @JsonPropertyDescription("错误信息")
+    private String message;
     @JsonPropertyDescription("菜品名称，需与用户输入的 course 一致，如西红柿炒鸡蛋")
     private String dishName;
     @JSONField(name = "take_times")

@@ -217,7 +217,7 @@ public class TestApi extends BaseController {
 
     @GetMapping("test9")
     public List<Document> test9(String course) {
-        SearchRequest searchRequest = SearchRequest.builder().query(course).topK(2).build();
+        SearchRequest searchRequest = SearchRequest.builder().query(course).similarityThreshold(0.8f).topK(2).build();
         List<Document> documents = redisVectorStore.similaritySearch(searchRequest);
         return documents;
     }

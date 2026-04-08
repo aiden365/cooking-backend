@@ -66,10 +66,8 @@ public class DishApi extends BaseController {
 
 
 
-    @Resource(name = "qwen")
+    @Resource(name = "ollamaQwen")
     private ChatModel qwenChatModel;
-    @Resource(name = "qwenEmbedding")
-    private EmbeddingModel qwenEmbedding;
     @Resource(name = "redisVectorStore")
     private VectorStore redisVectorStore;
 
@@ -123,7 +121,8 @@ public class DishApi extends BaseController {
     @PostMapping("search")
     public BaseResponse search(@RequestBody JSONObject params) {
         String search = params.getString("search");
-        SearchRequest searchRequest = SearchRequest.builder().query(search).topK(2).build();
+        System.out.println( search);
+        SearchRequest searchRequest = SearchRequest.builder().query(search).similarityThreshold(0.8f).topK(5).build();
         List<Document> documents = redisVectorStore.similaritySearch(searchRequest);
         return ok(documents);
     }
@@ -144,8 +143,8 @@ public class DishApi extends BaseController {
     /**
      * AI生成并保存菜谱
      */
-    @PostMapping("aigcSave")
-    public BaseResponse aigcSave(@RequestBody JSONObject params) {
+    @PostMapping("aigc")
+    public BaseResponse aigc(@RequestBody JSONObject params) {
         String dishName = params.getString("dishName");
         if (!StringUtils.hasText(dishName)) {
             throw new ApiException(BaseResponse.Code.fail.code, "dishName不能为空");
@@ -154,6 +153,9 @@ public class DishApi extends BaseController {
         String aiText = callAi(dishName);
         AIRecipeDTO aiRecipeDTO = parseAiRecipe(aiText);
 
+        if ("error".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
+            throw new ApiException(BaseResponse.Code.fail.code, aiRecipeDTO.getMessage());
+        }
         if (!"success".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
             throw new ApiException(BaseResponse.Code.fail.code, "AI生成失败");
         }
@@ -173,7 +175,7 @@ public class DishApi extends BaseController {
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("dishId", savedDish.getId());
             metadata.put("dishName", savedDish.getName());
-            redisVectorStore.add(List.of(new Document(buildVectorText(aiRecipeDTO), metadata)));
+            redisVectorStore.add(List.of(new Document(savedDish.getId().toString(),buildVectorText(aiRecipeDTO), metadata)));
         } catch (Exception e) {
             log.error("保存向量数据库失败,dishId={}", savedDish.getId(), e);
         }
@@ -220,6 +222,7 @@ public class DishApi extends BaseController {
         dto.setDishName(root.getString("dish_name"));
         dto.setTakeTimes(root.getString("take_times"));
         dto.setTips(root.getString("tips"));
+        dto.setMessage(root.getString("message"));
 
         JSONArray materials = root.getJSONArray("materials");
         if (materials != null) {
@@ -250,8 +253,8 @@ public class DishApi extends BaseController {
 
     private String buildVectorText(AIRecipeDTO dto) {
         StringBuilder sb = new StringBuilder();
-        sb.append("name:").append(dto.getDishName()).append('\n');
-        sb.append("materials:").append(CollUtil.join(dto.getMaterials().stream().map(e -> e.getName()).collect(Collectors.toList()), ",")).append('\n');
+        sb.append(dto.getDishName()).append(',');
+        sb.append(CollUtil.join(dto.getMaterials().stream().map(AIRecipeDTO.Materials::getName).collect(Collectors.toList()), ","));
         return sb.toString();
     }
 }

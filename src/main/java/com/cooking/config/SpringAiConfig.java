@@ -18,12 +18,13 @@ import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.redis.RedisVectorStore;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisPooled;
 
 @Configuration
@@ -43,8 +44,6 @@ public class SpringAiConfig {
     private String vectorStoreIndexName;
     @Value("${spring.ai.vectorstore.redis.prefix}")
     private String vectorStorePrefix;
-    @Autowired
-    private RedisProperties redisProperties;
 
 
 
@@ -64,11 +63,11 @@ public class SpringAiConfig {
     }
 
     @Bean(name = "ollamaQwen")
-    public OllamaChatModel ollamaQwen(){
+    public ChatModel ollamaQwen(){
         return OllamaChatModel.builder().ollamaApi(OllamaApi.builder().baseUrl(ollamaBaseUrl).build()).defaultOptions(OllamaChatOptions.builder().model(ollamaModel).build()).build();
 
     }
-    /*@Bean(name = "ollamaQwenEmbedding")*/
+    @Bean(name = "ollamaQwenEmbedding")
     public OllamaEmbeddingModel ollamaQwenEmbedding(){
         return OllamaEmbeddingModel.builder().ollamaApi(OllamaApi.builder().baseUrl(ollamaBaseUrl).build()).defaultOptions(OllamaEmbeddingOptions.builder().model(ollamaEmbeddingModel).build()).build();
     }
@@ -79,8 +78,8 @@ public class SpringAiConfig {
     }
 
     @Bean(name = "redisVectorStore")
-    public VectorStore redisVectorStore(JedisPooled jedisPooled, @Qualifier("qwenEmbedding") EmbeddingModel embeddingModel) {
-        RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled, embeddingModel);
+    public VectorStore redisVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("ollamaQwenEmbedding") EmbeddingModel embeddingModel) {
+        RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled(jedisConnectionFactory), embeddingModel);
         builder.initializeSchema(vectorStoreInitializeSchema);
         builder.indexName(vectorStoreIndexName);
         builder.prefix(vectorStorePrefix);
@@ -92,13 +91,15 @@ public class SpringAiConfig {
         return builder.build();
     }
 
+    private JedisPooled jedisPooled(JedisConnectionFactory jedisConnectionFactory) {
+        DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig.builder();
+        builder.ssl(jedisConnectionFactory.isUseSsl());
+        builder.clientName(jedisConnectionFactory.getClientName());
+        builder.timeoutMillis(jedisConnectionFactory.getTimeout());
+        builder.password(jedisConnectionFactory.getPassword());
+        DefaultJedisClientConfig clientConfig = builder.build();
 
-
-    @Bean
-    public JedisPooled jedisPooled() {
-        return new JedisPooled(redisProperties.getHost(), redisProperties.getPort());
+        return new JedisPooled(new HostAndPort(jedisConnectionFactory.getHostName(), jedisConnectionFactory.getPort()),clientConfig);
     }
-
-
 
 }
