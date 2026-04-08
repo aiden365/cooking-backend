@@ -47,6 +47,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 - [x] **阶段 0: 基础设施搭建**
     - [x] Spring Boot + MyBatis-Plus 框架搭建 (已完成)
     - [x] 各数据库表的查询代码生成，方便后续开发 (已完成)
+    - [ ] 通用文件上传接口实现（当前进行）
 - [x] **阶段 1: 用户模块 (User Module)**
     - [x] 数据库 user 表设计与 Entity 生成 (已完成)
     - [x] 登录/注册接口开发 (包含密码加密) (已完成)
@@ -68,12 +69,12 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 标签模块接口开发 (已完成)
 - [ ] **阶段 3: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
-    - [ ] 菜谱智能生成接口开发 (当前进行)
+    - [ ] 菜谱智能生成接口开发 (已暂停)
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`用户注册接口实现`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/UserApi.java现有的register接口中，实现用户注册功能。
-> 2：从前端接受用户的注册信息（username，password，email，emailCode）
-> 3：对emailCode进行验证，验证成功后，将用户信息保存到数据库中。
-> 4：在UserApi.java中添加发送邮箱验证码接口，接受email地址为参数，对用户输入的email地址进行简单的格式验证，并生成一个随机的6位数字验证码，发送给用户，验证码存储到redis中，有效期5分钟。
+> 现在，让我们开始`通用文件上传接口实现`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/FileApi.java中实现，添加一个upload接口，接受文件上传请求。
+> 2：上传的文件存储在application.properties中配置的upload.path路径下。
+> 3：对文件进行分类存储，根据接口的参数决定文件的存储路径（PathEnum.java）。
+> 4：进行必要的参数验证，与友好提示。
