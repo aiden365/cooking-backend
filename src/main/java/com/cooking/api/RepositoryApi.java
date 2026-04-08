@@ -103,21 +103,17 @@ public class RepositoryApi extends BaseController {
 
     @PostMapping("delete")
     public BaseResponse delete(@RequestBody JSONObject params) {
-        List<String> ids = params.getList("ids", String.class);
+        List<Long> ids = params.getList("ids", Long.class);
         if (ids == null || ids.isEmpty()) {
             return fail("id列表不能为空");
         }
 
         // Find all chunk IDs associated with the repository IDs and delete them from the vector store.
         List<String> chunkIdsToDelete = new ArrayList<>();
-        for (String repoId : ids) {
-            List<Document> documentsToDelete = redisVectorStore.similaritySearch(
-                    SearchRequest.query("")
-                            .withTopK(1000)
-                            .withFilterExpression("repository_id == '" + repoId + "'")
-            );
+        for (Long repoId : ids) {
+            List<Document> documentsToDelete = redisVectorStore.similaritySearch(SearchRequest.builder().filterExpression(new FilterExpressionBuilder().eq("repository_id", repoId.toString()).build()).build());
             if (documentsToDelete != null && !documentsToDelete.isEmpty()) {
-                chunkIdsToDelete.addAll(documentsToDelete.stream().map(Document::getId).collect(Collectors.toList()));
+                chunkIdsToDelete.addAll(documentsToDelete.stream().map(Document::getId).toList());
             }
         }
 
