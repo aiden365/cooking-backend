@@ -10,11 +10,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.*;
-import com.cooking.core.service.UserService;
-import com.cooking.core.service.UserDishCollectService;
-import com.cooking.core.service.UserLabelRelService;
-import com.cooking.core.service.UserNutritionRelService;
-import com.cooking.core.service.UserShareService;
+import com.cooking.core.service.*;
 import com.cooking.dto.UserEmailCodeDTO;
 import com.cooking.dto.UserRegisterDTO;
 import com.cooking.utils.EmailUtils;
@@ -65,6 +61,8 @@ public class UserApi extends BaseController {
     private UserLabelRelService userLabelRelService;
     @Autowired
     private UserNutritionRelService userNutritionRelService;
+    @Autowired
+    private UserIndividualDishService userIndividualDishService;
 
     @PostMapping("list")
     public BaseResponse list(@RequestBody JSONObject params) {
@@ -208,12 +206,14 @@ public class UserApi extends BaseController {
         long shareCount = userShareService.lambdaQuery().eq(UserShareEntity::getUserId, userId).count();
         long labelCount = userLabelRelService.lambdaQuery().eq(UserLabelRelEntity::getUserId, userId).count();
         long nutritionCount = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).count();
+        long individualDishCount = userIndividualDishService.lambdaQuery().eq(UserIndividualDishEntity::getUserId, userId).count();
 
         JSONObject result = new JSONObject();
         result.put("collectCount", collectCount);
         result.put("shareCount", shareCount);
         result.put("labelCount", labelCount);
         result.put("nutritionCount", nutritionCount);
+        result.put("individualDishCount", individualDishCount);
 
         return ok(result);
     }

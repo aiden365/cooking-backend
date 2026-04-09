@@ -15,6 +15,7 @@ CREATE TABLE `tbl_dish`  (
   `take_times` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '预计用时',
   `source_type` int(11) NOT NULL COMMENT '来源：1=手动添加，2=AI生成',
   `check_status` int(11) NOT NULL COMMENT '检查状态：1=未经人工检验，2=经过人工检验',
+  `check_time` datetime DEFAULT NULL COMMENT '检查时间',
   `view_count` bigint(20) NOT NULL COMMENT '菜品浏览量',
   `active_val` int(11) NOT NULL COMMENT '菜谱活跃值',
   `popular_val` int(11) NOT NULL COMMENT '菜谱人气值',

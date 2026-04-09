@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldNameConstants;
 
+import java.util.Date;
 import java.util.List;
 
 
@@ -65,6 +66,13 @@ public class DishEntity extends BaseEntity {
      */
     @TableField("check_status")
     private Integer checkStatus;
+
+    /**
+     * 检查时间
+     */
+    @TableField("check_time")
+    private Date checkTime;
+
 
 
 

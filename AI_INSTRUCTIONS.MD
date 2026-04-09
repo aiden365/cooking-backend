@@ -60,7 +60,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 用户注册接口实现 (已完成)
     - [x] 用户统计信息接口开发 (已完成)
     - [x] 保存用户标签接口开发 (已完成)
-    - [ ] 生成用户个性化菜谱接口开发 (当前进行)
+    - [x] 生成用户个性化菜谱接口开发 (已完成)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -74,16 +74,18 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 - [x] **阶段 4: 知识库模块 (Lable Module)**
   - [x] 保存知识库接口开发 (已完成)
   - [x] 删除知识库接口开发 (已完成)
-- [ ] **阶段 5: AI 对接模块 (AI Chat Module)**
+- [x] **阶段 5: 系统首页 (Lable Module)**
+  - [x] 完成系统首页的数据统计接口开发 (已完成)
+  - [x] 完成系统首页的菜谱审核统计接口开发 (已完成)
+  - [ ] 完成系统首页的菜谱动态统计接口开发 (当前进行)
+- [x] **阶段 6: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
     - [x] 菜谱智能生成接口开发 (已完成)
-    - [ ] 菜谱智能生成添加RAG功能 (当前进行)
+    - [x] 菜谱智能生成添加RAG功能 (已完成)
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`生成用户个性化菜谱接口开发`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/UserIndividualDishApi.java中实现。在现有接口aigc的基础上进行。接口接收{dishId: 菜谱id, labels: 标签id列表}
-> 2：根据参数获取菜谱数据和标签数据，填充 个性化菜谱提示词模板 （user_individual_prompt.md）
-> 3：个性化菜谱提示词模板 包括饮食偏好（即标签列表），现有菜谱-主料清单（existMaterial）、现有菜谱-调料清单（existFlavor）、现有菜谱-制作步骤（existStep）
-> 4：将AI给出的结果，保存到UserIndividualDishEntity，并做好逻辑外键userId, dishId的维护
-> 5：对用户选择的标签数量进行最大值验证，不能超过3个
+> 现在，让我们开始`完成系统首页的菜谱动态统计接口开发`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/IndexApi.java中实现。 创建统计接口 dishDynamicsData。
+> 2：接口 dishDynamicsData，以列表形式返回最近30天菜谱动态信息，包括每天ai生成数量和人工审核数量，大致结构: [{"day":"2026年4月9日","aigcCount":10,"checkCount":9},{"day":"2026年4月8日","aigcCount":10,"checkCount":9}]
+> 3：要求按照日期天数的倒序排列
