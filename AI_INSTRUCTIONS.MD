@@ -77,7 +77,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 - [x] **阶段 5: 系统首页 (Lable Module)**
   - [x] 完成系统首页的数据统计接口开发 (已完成)
   - [x] 完成系统首页的菜谱审核统计接口开发 (已完成)
-  - [ ] 完成系统首页的菜谱动态统计接口开发 (当前进行)
+  - [ ] 完成系统首页的菜谱动态统计接口开发 (已完成)
 - [x] **阶段 6: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
     - [x] 菜谱智能生成接口开发 (已完成)

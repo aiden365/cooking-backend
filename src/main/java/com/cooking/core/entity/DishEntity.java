@@ -95,6 +95,12 @@ public class DishEntity extends BaseEntity {
     private Integer popularVal;
 
     /**
+     * 菜谱总评分, 默认0表示未打分
+     */
+    @TableField("total_score")
+    private Integer totalScore;
+
+    /**
      * 菜谱标签
      */
     @TableField(exist = false)

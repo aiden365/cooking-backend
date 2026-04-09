@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,10 +112,10 @@ public class DishAppraisesApi extends BaseController {
         double manipulationAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getManipulationScore).average().orElse(0D);
         double equalAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getEqualScore).average().orElse(0D);
         double satisfactionAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getSatisfactionScore).average().orElse(0D);
-
-
+        int totalScore = buildTotalScore(manipulationAvg, equalAvg, satisfactionAvg);
 
         dishEntity.setActiveVal(appraisesList.size());
+        dishEntity.setTotalScore(totalScore);
         dishService.updateById(dishEntity);
 
         Map<String, Object> result = new HashMap<>();
@@ -121,6 +123,7 @@ public class DishAppraisesApi extends BaseController {
         result.put("manipulationAvg", manipulationAvg);
         result.put("equalAvg", equalAvg);
         result.put("satisfactionAvg", satisfactionAvg);
+        result.put("totalScore", totalScore);
         return ok(result);
     }
 
@@ -131,5 +134,14 @@ public class DishAppraisesApi extends BaseController {
         if (score < 1 || score > 5) {
             throw new ApiException(BaseResponse.Code.fail.code, fieldName + "必须在1-5之间");
         }
+    }
+
+    private int buildTotalScore(double manipulationAvg, double equalAvg, double satisfactionAvg) {
+        return BigDecimal.valueOf(manipulationAvg).multiply(BigDecimal.valueOf(0.3))
+                .add(BigDecimal.valueOf(equalAvg).multiply(BigDecimal.valueOf(0.3)))
+                .add(BigDecimal.valueOf(satisfactionAvg).multiply(BigDecimal.valueOf(0.4)))
+                .multiply(BigDecimal.TEN)
+                .setScale(0, RoundingMode.HALF_UP)
+                .intValue();
     }
 }

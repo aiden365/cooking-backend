@@ -19,6 +19,7 @@ CREATE TABLE `tbl_dish`  (
   `view_count` bigint(20) NOT NULL COMMENT '菜品浏览量',
   `active_val` int(11) NOT NULL COMMENT '菜谱活跃值',
   `popular_val` int(11) NOT NULL COMMENT '菜谱人气值',
+  `total_score` int NOT NULL DEFAULT '0' COMMENT '菜谱总评分',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
   `update_time` datetime NOT NULL COMMENT '修改时间',
