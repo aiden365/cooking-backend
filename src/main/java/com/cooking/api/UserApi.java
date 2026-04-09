@@ -9,8 +9,12 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseResponse;
-import com.cooking.core.entity.UserEntity;
+import com.cooking.core.entity.*;
 import com.cooking.core.service.UserService;
+import com.cooking.core.service.UserDishCollectService;
+import com.cooking.core.service.UserLabelRelService;
+import com.cooking.core.service.UserNutritionService;
+import com.cooking.core.service.UserShareService;
 import com.cooking.dto.UserEmailCodeDTO;
 import com.cooking.dto.UserRegisterDTO;
 import com.cooking.utils.EmailUtils;
@@ -26,6 +30,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Collections;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 /**
  * <p>
@@ -48,6 +57,14 @@ public class UserApi extends BaseController {
     private StringRedisTemplate stringRedisTemplate;
     @Autowired
     private EmailUtils emailUtils;
+    @Autowired
+    private UserDishCollectService userDishCollectService;
+    @Autowired
+    private UserShareService userShareService;
+    @Autowired
+    private UserLabelRelService userLabelRelService;
+    @Autowired
+    private UserNutritionService userNutritionService;
 
     @PostMapping("list")
     public BaseResponse list(@RequestBody JSONObject params) {
@@ -78,8 +95,9 @@ public class UserApi extends BaseController {
         String userCode = params.getString("userCode");
         String password = params.getString("password");
         String digestedHex = MD5.create().digestHex(password);
-        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getUserCode, userCode).eq(UserEntity::getUserPass, digestedHex).list().stream().findAny().orElse(null);
-        if(userEntity == null){
+        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getUserCode, userCode)
+                .eq(UserEntity::getUserPass, digestedHex).list().stream().findAny().orElse(null);
+        if (userEntity == null) {
             return fail("用户不存在");
         }
         String token = UUID.randomUUID().toString();
@@ -110,7 +128,9 @@ public class UserApi extends BaseController {
             return fail("邮箱验证码错误或已过期");
         }
 
-        UserEntity existUserEntity = userService.lambdaQuery().and(wrapper -> wrapper.eq(UserEntity::getUserCode, email).or().eq(UserEntity::getEmail, email)).list().stream().findAny().orElse(null);
+        UserEntity existUserEntity = userService.lambdaQuery()
+                .and(wrapper -> wrapper.eq(UserEntity::getUserCode, email).or().eq(UserEntity::getEmail, email)).list()
+                .stream().findAny().orElse(null);
         if (existUserEntity != null) {
             return fail("该邮箱已注册");
         }
@@ -143,21 +163,25 @@ public class UserApi extends BaseController {
             return fail("邮箱格式不正确");
         }
 
-        UserEntity existUserEntity = userService.lambdaQuery().and(wrapper -> wrapper.eq(UserEntity::getUserCode, email).or().eq(UserEntity::getEmail, email)).list().stream().findAny().orElse(null);
+        UserEntity existUserEntity = userService.lambdaQuery()
+                .and(wrapper -> wrapper.eq(UserEntity::getUserCode, email).or().eq(UserEntity::getEmail, email)).list()
+                .stream().findAny().orElse(null);
         if (existUserEntity != null) {
             return fail("该邮箱已注册");
         }
 
         String emailCode = RandomUtil.randomNumbers(6);
         emailUtils.sendVerificationCodeEmail(email, emailCode, EMAIL_CODE_EXPIRE_MINUTES);
-        stringRedisTemplate.opsForValue().set(buildEmailCodeKey(email),emailCode,EMAIL_CODE_EXPIRE_MINUTES,TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(buildEmailCodeKey(email), emailCode, EMAIL_CODE_EXPIRE_MINUTES,
+                TimeUnit.MINUTES);
         return ok("验证码已发送");
     }
 
     @PostMapping("edit")
     public BaseResponse edit(@RequestBody UserEntity userEntity) {
-        UserEntity existUserEntity = userService.lambdaQuery().eq(UserEntity::getId, userEntity.getId()).list().stream().findAny().orElse(null);
-        if(existUserEntity == null){
+        UserEntity existUserEntity = userService.lambdaQuery().eq(UserEntity::getId, userEntity.getId()).list().stream()
+                .findAny().orElse(null);
+        if (existUserEntity == null) {
             return fail("用户不存在");
         }
 
@@ -173,4 +197,50 @@ public class UserApi extends BaseController {
         return EMAIL_CODE_KEY_PREFIX + email.toLowerCase();
     }
 
+    @PostMapping("count")
+    public BaseResponse count(@RequestBody JSONObject params) {
+        Long userId = params.getLong("userId");
+        if (userId == null) {
+            return fail("userId不能为空");
+        }
+
+        long collectCount = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getUserId, userId).count();
+        long shareCount = userShareService.lambdaQuery().eq(UserShareEntity::getUserId, userId).count();
+        long labelCount = userLabelRelService.lambdaQuery().eq(UserLabelRelEntity::getUserId, userId).count();
+        long nutritionCount = userNutritionService.lambdaQuery().eq(UserNutritionEntity::getUserId, userId).count();
+
+        JSONObject result = new JSONObject();
+        result.put("collectCount", collectCount);
+        result.put("shareCount", shareCount);
+        result.put("labelCount", labelCount);
+        result.put("nutritionCount", nutritionCount);
+
+        return ok(result);
+    }
+
+    @PostMapping("saveLabels")
+    public BaseResponse saveLabels(@RequestBody JSONObject params) {
+        Long userId = params.getLong("userId");
+        List<Long> labelIds = params.getList("labels", Long.class);
+
+        if (userId == null) {
+            return fail("userId不能为空");
+        }
+
+        long currentLabelCount = userLabelRelService.count(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId));
+        Set<Long> existingLabelIds = userLabelRelService.list(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId)).stream().map(UserLabelRelEntity::getLabelId).collect(Collectors.toSet());
+
+        Set<Long> newLabelIds = (labelIds == null) ? Collections.emptySet() : new HashSet<>(labelIds);
+
+        long toAddCount = newLabelIds.stream().filter(id -> !existingLabelIds.contains(id)).count();
+        long toDeleteCount = existingLabelIds.stream().filter(id -> !newLabelIds.contains(id)).count();
+
+        if (currentLabelCount + toAddCount - toDeleteCount > 5) {
+            return fail("用户标签总数不能超过5个");
+        }
+
+        userLabelRelService.saveUserLabels(userId, labelIds);
+
+        return ok("用户标签保存成功");
+    }
 }

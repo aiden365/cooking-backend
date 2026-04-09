@@ -57,7 +57,9 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 用户菜品分享相关接口开发 (已完成)
     - [x] 用户菜品分享评论相关接口开发 (已完成)
     - [x] 用户营养目标相关接口开发 (已完成)
-    - [ ] 用户注册接口实现 (当前进行)
+    - [x] 用户注册接口实现 (已完成)
+    - [x] 用户统计信息接口开发 (已完成)
+    - [x] 保存用户标签接口开发 (已完成)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -65,11 +67,12 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 菜品的评分接口开发 (已完成)
     - [x] 菜品食材管理接口开发 (已完成)
     - [x] 菜品制作步骤管理接口开发 (已完成)
+    - [x] 保存菜品标签接口开发 (已完成)
 - [x] **阶段 3: 标签模块 (Lable Module)**
     - [x] 标签模块接口开发 (已完成)
 - [x] **阶段 4: 知识库模块 (Lable Module)**
   - [x] 保存知识库接口开发 (已完成)
-  - [ ] 删除知识库接口开发 (已完成)
+  - [x] 删除知识库接口开发 (已完成)
 - [ ] **阶段 5: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
     - [x] 菜谱智能生成接口开发 (已完成)
@@ -77,8 +80,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`菜谱智能生成添加RAG功能`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/DishApi.java中实现。
-> 2：在现有callAi的基础上添加RAG功能。
-> 3：我已经在RepositoryApi.java中添加的知识库的保存接口（save），请参考。
-> 4：或许可以使用spring-ai-rag依赖
+> 现在，让我们开始`保存用户标签接口开发`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/UserApi.java中实现。添加saveLabels接口, 用于保存用户标签。
+> 2：接口接受{userId: 用户ID, labels: 标签id列表}。
+> 3：要求能够删除未选择的标签，并保存新的标签。

@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.IoUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
@@ -36,12 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -324,5 +320,31 @@ public class DishApi extends BaseController {
         sb.append(dto.getDishName()).append(',');
         sb.append(CollUtil.join(dto.getMaterials().stream().map(AIRecipeDTO.Materials::getName).collect(Collectors.toList()), ","));
         return sb.toString();
+    }
+
+    @PostMapping("saveLabels")
+    public BaseResponse saveLabels(@RequestBody JSONObject params) {
+        Long dishId = params.getLong("dishId");
+        List<Long> labelIds = params.getList("labels", Long.class);
+
+        if (dishId == null) {
+            return fail("dishId不能为空");
+        }
+
+        long currentLabelCount = dishLableRelService.count(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId));
+        Set<Long> existingLabelIds = dishLableRelService.list(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId)).stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet());
+
+        Set<Long> newLabelIds = (labelIds == null) ? Collections.emptySet() : new HashSet<>(labelIds);
+
+        long toAddCount = newLabelIds.stream().filter(id -> !existingLabelIds.contains(id)).count();
+        long toDeleteCount = existingLabelIds.stream().filter(id -> !newLabelIds.contains(id)).count();
+
+        if (currentLabelCount + toAddCount - toDeleteCount > 5) {
+            return fail("菜品标签总数不能超过5个");
+        }
+
+        dishLableRelService.saveDishLabels(dishId, labelIds);
+
+        return ok("用户标签保存成功");
     }
 }

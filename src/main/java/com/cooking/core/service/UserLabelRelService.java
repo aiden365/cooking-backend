@@ -23,4 +23,6 @@ public interface UserLabelRelService extends BaseService<UserLabelRelEntity> {
     IPage<UserLabelRelEntity> findPage(IPage<UserLabelRelEntity> page, Map<String, Object> params);
 
     void deleteByIds(Set<String> ids);
+
+    void saveUserLabels(Long userId, List<Long> labelIds);
 }

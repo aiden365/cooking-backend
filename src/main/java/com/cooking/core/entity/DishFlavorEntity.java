@@ -13,6 +13,7 @@ import lombok.experimental.FieldNameConstants;
  * </p>
  */
 @Data
+@Builder
 @FieldNameConstants
 @Accessors(chain = true)
 @TableName("tbl_dish_flavors")

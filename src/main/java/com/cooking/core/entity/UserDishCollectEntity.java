@@ -17,6 +17,7 @@ import lombok.experimental.FieldNameConstants;
  * @since 2026-03-04
  */
 @Data
+@Builder
 @FieldNameConstants
 @Accessors(chain = true)
 @TableName("tbl_user_dish_collect")

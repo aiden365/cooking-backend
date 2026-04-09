@@ -130,7 +130,7 @@ public class LabelApi extends BaseController {
         LambdaQueryWrapper<UserLabelRelEntity> wrapper = new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId).eq(UserLabelRelEntity::getLabelId, labelId);
         UserLabelRelEntity relEntity = userLabelRelService.getOne(wrapper);
         if (relEntity == null) {
-            relEntity = new UserLabelRelEntity().setUserId(userId).setLabelId(labelId);
+            relEntity = UserLabelRelEntity.builder().userId(userId).labelId(labelId).build();
             userLabelRelService.save(relEntity);
         }
         return ok(relEntity);

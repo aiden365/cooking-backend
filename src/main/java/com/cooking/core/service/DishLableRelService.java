@@ -23,4 +23,6 @@ public interface DishLableRelService extends BaseService<DishLabelRelEntity> {
     IPage<DishLabelRelEntity> findPage(IPage<DishLabelRelEntity> page, Map<String, Object> params);
 
     void deleteByIds(Set<String> ids);
+
+    void saveDishLabels(Long dishId, List<Long> labelIds);
 }

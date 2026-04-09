@@ -19,6 +19,7 @@ import java.util.List;
  * @since 2026-03-04
  */
 @Data
+@Builder
 @FieldNameConstants
 @Accessors(chain = true)
 @TableName("tbl_dish_comment")

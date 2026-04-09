@@ -3,6 +3,7 @@ package com.cooking.core.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.cooking.base.BaseEntity;
+import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldNameConstants;
@@ -17,6 +18,7 @@ import lombok.experimental.FieldNameConstants;
  * @since 2026-03-04
  */
 @Data
+@Builder
 @FieldNameConstants
 @Accessors(chain = true)
 @TableName("tbl_dish_label_rel")
