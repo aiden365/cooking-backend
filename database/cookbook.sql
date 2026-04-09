@@ -172,7 +172,7 @@ CREATE TABLE `tbl_repository`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '名称',
   `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '描述',
-  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件地址',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容',
   `type` int(11) NOT NULL COMMENT '知识类型，1：菜谱知识，2：营养知识',
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',

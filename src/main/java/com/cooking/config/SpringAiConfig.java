@@ -5,7 +5,6 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingOptions;
-import com.alibaba.fastjson2.JSONObject;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.ChatOptions;
@@ -40,10 +39,14 @@ public class SpringAiConfig {
     private String ollamaEmbeddingModel;
     @Value("${spring.ai.vectorstore.redis.initialize-schema}")
     private Boolean vectorStoreInitializeSchema;
-    @Value("${spring.ai.vectorstore.redis.index-name}")
-    private String vectorStoreIndexName;
-    @Value("${spring.ai.vectorstore.redis.prefix}")
-    private String vectorStorePrefix;
+    @Value("${spring.ai.vectorstore.redis.dish.index-name}")
+    private String dishVectorStoreIndexName;
+    @Value("${spring.ai.vectorstore.redis.dish.prefix}")
+    private String dishVectorStorePrefix;
+    @Value("${spring.ai.vectorstore.redis.repository.index-name}")
+    private String repositoryVectorStoreIndexName;
+    @Value("${spring.ai.vectorstore.redis.repository.prefix}")
+    private String repositoryVectorStorePrefix;
 
 
 
@@ -77,14 +80,32 @@ public class SpringAiConfig {
         return ChatClient.builder(chatModel).defaultOptions(ChatOptions.builder().model(ollamaModel).build()).build();
     }
 
-    @Bean(name = "redisVectorStore")
-    public VectorStore redisVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("ollamaQwenEmbedding") EmbeddingModel embeddingModel) {
+    @Bean(name = "dishVectorStore")
+    public VectorStore dishVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("ollamaQwenEmbedding") EmbeddingModel embeddingModel) {
         RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled(jedisConnectionFactory), embeddingModel);
         builder.initializeSchema(vectorStoreInitializeSchema);
-        builder.indexName(vectorStoreIndexName);
-        builder.prefix(vectorStorePrefix);
+        builder.indexName(dishVectorStoreIndexName);
+        builder.prefix(dishVectorStorePrefix);
+        builder.metadataFields(
+                RedisVectorStore.MetadataField.tag("dishId"),
+                RedisVectorStore.MetadataField.tag("dishName")
+        );
+        builder.batchingStrategy(new TokenCountBatchingStrategy());
+
+        return builder.build();
+    }
+
+    @Bean(name = "repositoryVectorStore")
+    public VectorStore repositoryVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("ollamaQwenEmbedding") EmbeddingModel embeddingModel) {
+        RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled(jedisConnectionFactory), embeddingModel);
+        builder.initializeSchema(vectorStoreInitializeSchema);
+        builder.indexName(repositoryVectorStoreIndexName);
+        builder.prefix(repositoryVectorStorePrefix);
         // 可选：定义用于过滤的元数据字段
-        builder.metadataFields(RedisVectorStore.MetadataField.tag("country"), RedisVectorStore.MetadataField.numeric("year"));
+        builder.metadataFields(
+                RedisVectorStore.MetadataField.tag("repository_id"),
+                RedisVectorStore.MetadataField.numeric("type")
+        );
         // 可选：默认为 TokenCountBatchingStrategy
         builder.batchingStrategy(new TokenCountBatchingStrategy());
 

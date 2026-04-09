@@ -69,14 +69,16 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 标签模块接口开发 (已完成)
 - [x] **阶段 4: 知识库模块 (Lable Module)**
   - [x] 保存知识库接口开发 (已完成)
-  - [ ] 删除知识库接口开发 (当前进行)
+  - [ ] 删除知识库接口开发 (已完成)
 - [ ] **阶段 5: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
-    - [ ] 菜谱智能生成接口开发 (已暂停)
+    - [x] 菜谱智能生成接口开发 (已完成)
+    - [ ] 菜谱智能生成添加RAG功能 (当前进行)
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`删除知识库接口开发`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/RepositoryApi.java中实现，添加delete接口
-> 2：接口接收 id列表 为参数 
-> 3：进行必要的参数验证，与友好提示。
+> 现在，让我们开始`菜谱智能生成添加RAG功能`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/DishApi.java中实现。
+> 2：在现有callAi的基础上添加RAG功能。
+> 3：我已经在RepositoryApi.java中添加的知识库的保存接口（save），请参考。
+> 4：或许可以使用spring-ai-rag依赖

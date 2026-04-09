@@ -17,14 +17,15 @@ import com.cooking.utils.SystemContextHelper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.StringUtils;
@@ -35,7 +36,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -68,8 +72,10 @@ public class DishApi extends BaseController {
 
     @Resource(name = "ollamaQwen")
     private ChatModel qwenChatModel;
-    @Resource(name = "redisVectorStore")
-    private VectorStore redisVectorStore;
+    @Resource(name = "dishVectorStore")
+    private VectorStore dishVectorStore;
+    @Resource(name = "repositoryVectorStore")
+    private VectorStore repositoryVectorStore;
 
     @Value("classpath:/template/user_prompt.md")
     private org.springframework.core.io.Resource cookTemplate;
@@ -123,7 +129,7 @@ public class DishApi extends BaseController {
         String search = params.getString("search");
         System.out.println( search);
         SearchRequest searchRequest = SearchRequest.builder().query(search).similarityThreshold(0.8f).topK(5).build();
-        List<Document> documents = redisVectorStore.similaritySearch(searchRequest);
+        List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
         return ok(documents);
     }
 
@@ -175,7 +181,7 @@ public class DishApi extends BaseController {
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("dishId", savedDish.getId());
             metadata.put("dishName", savedDish.getName());
-            redisVectorStore.add(List.of(new Document(savedDish.getId().toString(),buildVectorText(aiRecipeDTO), metadata)));
+            dishVectorStore.add(List.of(new Document(savedDish.getId().toString(),buildVectorText(aiRecipeDTO), metadata)));
         } catch (Exception e) {
             log.error("保存向量数据库失败,dishId={}", savedDish.getId(), e);
         }
@@ -184,11 +190,11 @@ public class DishApi extends BaseController {
     }
 
     private String callAi(String dishName) {
-        Prompt prompt = buildPrompt(dishName);
+        Prompt prompt = buildPrompt(dishName, retrieveKnowledgeContext(dishName));
         return qwenChatModel.call(prompt).getResult().getOutput().getText();
     }
 
-    private Prompt buildPrompt(String dishName) {
+    private Prompt buildPrompt(String dishName, String knowledgeContext) {
         String formatSuccess;
         String formatFail;
         try (InputStream successIns = aiSuccessResource.getInputStream();
@@ -205,7 +211,69 @@ public class DishApi extends BaseController {
         PromptTemplate promptTemplate = new PromptTemplate(cookTemplate);
         Message userMessage = promptTemplate.createMessage(Map.of("dishName", dishName));
 
-        return Prompt.builder().messages(List.of(systemMessage, userMessage)).build();
+        List<Message> messages = new ArrayList<>();
+        messages.add(systemMessage);
+        if (StringUtils.hasText(knowledgeContext)) {
+            messages.add(new SystemMessage("""
+                    ### 知识库参考资料
+                    以下内容来自系统知识库检索结果，请优先参考其内容生成菜谱。
+                    若检索内容不足或与食品安全常识冲突，请以食品安全和通用烹饪常识为准，不要编造不存在的专业结论。
+
+                    %s
+                    """.formatted(knowledgeContext)));
+        }
+        messages.add(userMessage);
+        return Prompt.builder().messages(messages).build();
+    }
+
+    private String retrieveKnowledgeContext(String dishName) {
+        try {
+            SearchRequest searchRequest = SearchRequest.builder()
+                    .query(dishName)
+                    .similarityThreshold(0.5f)
+                    .filterExpression(new FilterExpressionBuilder().eq("type", 1).build())
+                    .topK(8)
+                    .build();
+            List<Document> documents = repositoryVectorStore.similaritySearch(searchRequest);
+            if (documents == null || documents.isEmpty()) {
+                return "";
+            }
+
+            List<String> knowledgeList = documents.stream()
+                    .filter(document -> document.getMetadata() != null && document.getMetadata().containsKey("repository_id"))
+                    .sorted(Comparator.comparingInt(document -> repositorySort(document.getMetadata().get("type"))))
+                    .map(Document::getText)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .collect(Collectors.toCollection(LinkedHashSet::new))
+                    .stream()
+                    .limit(4)
+                    .toList();
+
+            if (knowledgeList.isEmpty()) {
+                return "";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < knowledgeList.size(); i++) {
+                builder.append(i + 1).append(". ").append(knowledgeList.get(i)).append('\n');
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            log.warn("知识库检索失败，已降级为普通生成,dishName={}", dishName, e);
+            return "";
+        }
+    }
+
+    private int repositorySort(Object type) {
+        if (type == null) {
+            return Integer.MAX_VALUE;
+        }
+        try {
+            return Integer.parseInt(type.toString());
+        } catch (NumberFormatException e) {
+            return Integer.MAX_VALUE;
+        }
     }
 
     private AIRecipeDTO parseAiRecipe(String aiText) {

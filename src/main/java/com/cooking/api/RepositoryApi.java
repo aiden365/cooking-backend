@@ -42,8 +42,8 @@ public class RepositoryApi extends BaseController {
 
     @Autowired
     private RepositoryService repositoryService;
-    @Resource(name = "redisVectorStore")
-    private VectorStore redisVectorStore;
+    @Resource(name = "repositoryVectorStore")
+    private VectorStore repositoryVectorStore;
     @Autowired
     private TokenTextSplitter tokenTextSplitter;
 
@@ -77,26 +77,29 @@ public class RepositoryApi extends BaseController {
         if (repositoryEntity.getType() == null) {
             return fail("知识类型不能为空");
         }
-        repositoryService.saveOrUpdate(repositoryEntity);
-
-        // 1. First, delete any existing chunks for this repository entry to handle updates cleanly.
-        List<Document> existingDocuments = redisVectorStore.similaritySearch(SearchRequest.builder().query("").filterExpression(new FilterExpressionBuilder().eq("repository_id", repositoryEntity.getId().toString()).build()).build());
-        if (existingDocuments != null && !existingDocuments.isEmpty()){
-            List<String> idsToDelete = existingDocuments.stream().map(Document::getId).collect(Collectors.toList());
-            redisVectorStore.delete(idsToDelete);
+        if (!StringUtils.hasText(repositoryEntity.getDescription())) {
+            return fail("描述不能为空");
+        }
+        if (!StringUtils.hasText(repositoryEntity.getContent())) {
+            return fail("内容不能为空");
         }
 
-        // 2. Now, create and split the new document.
-        String content = repositoryEntity.getName() + "。 " + (repositoryEntity.getDescription() == null ? "" : repositoryEntity.getDescription());
+        repositoryService.saveOrUpdate(repositoryEntity);
+
+        List<Document> existingDocuments = repositoryVectorStore.similaritySearch(SearchRequest.builder().query("").filterExpression(new FilterExpressionBuilder().eq("repository_id", repositoryEntity.getId().toString()).build()).build());
+        if (existingDocuments != null && !existingDocuments.isEmpty()){
+            List<String> idsToDelete = existingDocuments.stream().map(Document::getId).collect(Collectors.toList());
+            repositoryVectorStore.delete(idsToDelete);
+        }
+
+        String content = repositoryEntity.getContent() == null ? "" : repositoryEntity.getContent();
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("type", repositoryEntity.getType());
         metadata.put("repository_id", repositoryEntity.getId().toString()); // Add original ID to metadata
         Document document = new Document(content, metadata);
 
-        // Use a TokenTextSplitter to chunk the document
         List<Document> chunks = tokenTextSplitter.apply(List.of(document));
-        // 3. Add the new chunks to the vector store
-        redisVectorStore.add(chunks);
+        repositoryVectorStore.add(chunks);
 
         return ok();
     }
@@ -111,14 +114,14 @@ public class RepositoryApi extends BaseController {
         // Find all chunk IDs associated with the repository IDs and delete them from the vector store.
         List<String> chunkIdsToDelete = new ArrayList<>();
         for (Long repoId : ids) {
-            List<Document> documentsToDelete = redisVectorStore.similaritySearch(SearchRequest.builder().filterExpression(new FilterExpressionBuilder().eq("repository_id", repoId.toString()).build()).build());
+            List<Document> documentsToDelete = repositoryVectorStore.similaritySearch(SearchRequest.builder().filterExpression(new FilterExpressionBuilder().eq("repository_id", repoId.toString()).build()).build());
             if (documentsToDelete != null && !documentsToDelete.isEmpty()) {
                 chunkIdsToDelete.addAll(documentsToDelete.stream().map(Document::getId).toList());
             }
         }
 
         if (!chunkIdsToDelete.isEmpty()) {
-            redisVectorStore.delete(chunkIdsToDelete);
+            repositoryVectorStore.delete(chunkIdsToDelete);
         }
 
         // Finally, delete the entries from the main database.

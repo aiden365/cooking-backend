@@ -35,10 +35,10 @@ public class RepositoryEntity extends BaseEntity {
     private String description;
 
     /**
-     * 文件地址
+     * 内容
      */
-    @TableField("file_path")
-    private String filePath;
+    @TableField("content")
+    private String content;
 
     /**
      * 知识类型，1：菜谱知识，2：营养知识

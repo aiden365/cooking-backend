@@ -70,8 +70,8 @@ public class TestApi extends BaseController {
     private org.springframework.core.io.Resource aiFailResource;
     @Resource(name = "qwenEmbedding")
     private EmbeddingModel qwenEmbedding;
-    @Resource(name = "redisVectorStore")
-    private VectorStore redisVectorStore;
+    @Resource(name = "dishVectorStore")
+    private VectorStore dishVectorStore;
     @Autowired
     EmailUtils emailUtils;
 
@@ -210,7 +210,7 @@ public class TestApi extends BaseController {
         EmbeddingResponse embeddingResponse = qwenEmbedding.embedForResponse(List.of(course));
         Embedding result = qwenEmbedding.embedForResponse(List.of(course)).getResult();
         List<Embedding> results = qwenEmbedding.embedForResponse(List.of(course)).getResults();
-        redisVectorStore.add(Arrays.asList(new Document(course)));
+        dishVectorStore.add(Arrays.asList(new Document(course)));
         return embeddingResponse;
     }
 
@@ -218,7 +218,7 @@ public class TestApi extends BaseController {
     @GetMapping("test9")
     public List<Document> test9(String course) {
         SearchRequest searchRequest = SearchRequest.builder().query(course).similarityThreshold(0.8f).topK(2).build();
-        List<Document> documents = redisVectorStore.similaritySearch(searchRequest);
+        List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
         return documents;
     }
 
