@@ -60,6 +60,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 用户注册接口实现 (已完成)
     - [x] 用户统计信息接口开发 (已完成)
     - [x] 保存用户标签接口开发 (已完成)
+    - [ ] 生成用户个性化菜谱接口开发 (当前进行)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -80,7 +81,9 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`保存用户标签接口开发`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/UserApi.java中实现。添加saveLabels接口, 用于保存用户标签。
-> 2：接口接受{userId: 用户ID, labels: 标签id列表}。
-> 3：要求能够删除未选择的标签，并保存新的标签。
+> 现在，让我们开始`生成用户个性化菜谱接口开发`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/UserIndividualDishApi.java中实现。在现有接口aigc的基础上进行。接口接收{dishId: 菜谱id, labels: 标签id列表}
+> 2：根据参数获取菜谱数据和标签数据，填充 个性化菜谱提示词模板 （user_individual_prompt.md）
+> 3：个性化菜谱提示词模板 包括饮食偏好（即标签列表），现有菜谱-主料清单（existMaterial）、现有菜谱-调料清单（existFlavor）、现有菜谱-制作步骤（existStep）
+> 4：将AI给出的结果，保存到UserIndividualDishEntity，并做好逻辑外键userId, dishId的维护
+> 5：对用户选择的标签数量进行最大值验证，不能超过3个
