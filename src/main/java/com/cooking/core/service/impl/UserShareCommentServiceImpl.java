@@ -1,5 +1,6 @@
 package com.cooking.core.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseServiceImpl;
@@ -34,6 +35,13 @@ public class UserShareCommentServiceImpl extends BaseServiceImpl<UserShareCommen
 
     @Override
     public void deleteByIds(Set<String> ids) {
+        removeByIds(ids);
+    }
 
+    @Override
+    public void incrementStartCount(Long id) {
+        UpdateWrapper<UserShareCommentEntity> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", id).setSql("start_count = start_count + 1");
+        update(updateWrapper);
     }
 }

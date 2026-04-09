@@ -23,4 +23,7 @@ public interface DishCommentService extends BaseService<DishCommentEntity> {
     IPage<DishCommentEntity> findPage(IPage<DishCommentEntity> page, Map<String, Object> params);
 
     void deleteByIds(Set<String> ids);
+
+    void incrementStartCount(Long id);
+
 }

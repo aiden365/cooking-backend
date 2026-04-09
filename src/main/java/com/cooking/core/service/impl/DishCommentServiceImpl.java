@@ -1,9 +1,11 @@
 package com.cooking.core.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseServiceImpl;
 import com.cooking.core.entity.DishCommentEntity;
+import com.cooking.core.entity.UserShareCommentEntity;
 import com.cooking.core.mapper.DishCommentMapper;
 import com.cooking.core.service.DishCommentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,5 +42,11 @@ public class DishCommentServiceImpl extends BaseServiceImpl<DishCommentMapper, D
     @Override
     public void deleteByIds(Set<String> ids) {
 
+    }
+    @Override
+    public void incrementStartCount(Long id) {
+        UpdateWrapper<DishCommentEntity> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", id).setSql("start_count = start_count + 1");
+        update(updateWrapper);
     }
 }

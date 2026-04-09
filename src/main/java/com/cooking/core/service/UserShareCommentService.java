@@ -21,4 +21,6 @@ public interface UserShareCommentService extends BaseService<UserShareCommentEnt
     IPage<UserShareCommentEntity> findPage(IPage<UserShareCommentEntity> page, Map<String, Object> params);
 
     void deleteByIds(Set<String> ids);
+
+    void incrementStartCount(Long id);
 }

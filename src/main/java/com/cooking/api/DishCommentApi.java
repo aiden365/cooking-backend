@@ -10,8 +10,10 @@ import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.DishCommentEntity;
 import com.cooking.core.entity.UserEntity;
+import com.cooking.core.entity.UserShareCommentEntity;
 import com.cooking.core.service.DishCommentService;
 import com.cooking.core.service.UserService;
+import com.cooking.exceptions.ApiException;
 import com.cooking.utils.SystemContextHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -86,5 +88,20 @@ public class DishCommentApi extends BaseController {
         entity.setContent(content);
         dishCommentService.save(entity);
         return ok(entity);
+    }
+
+    @PostMapping("start")
+    public BaseResponse start(@RequestBody JSONObject params) {
+        Long id = params.getLong("id");
+        if (id == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
+        }
+        DishCommentEntity commentEntity = dishCommentService.getById(id);
+        if (commentEntity == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "评论不存在");
+        }
+
+        dishCommentService.incrementStartCount(id);
+        return ok();
     }
 }
