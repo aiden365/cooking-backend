@@ -110,10 +110,10 @@ public class DishAppraisesApi extends BaseController {
         double manipulationAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getManipulationScore).average().orElse(0D);
         double equalAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getEqualScore).average().orElse(0D);
         double satisfactionAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getSatisfactionScore).average().orElse(0D);
-        int finalAvg = (int) Math.round((manipulationAvg + equalAvg + satisfactionAvg) / 3D);
 
-        dishEntity.setActiveVal((int) Math.round(manipulationAvg));
-        dishEntity.setPopularVal(finalAvg);
+
+
+        dishEntity.setActiveVal(appraisesList.size());
         dishService.updateById(dishEntity);
 
         Map<String, Object> result = new HashMap<>();
@@ -121,7 +121,6 @@ public class DishAppraisesApi extends BaseController {
         result.put("manipulationAvg", manipulationAvg);
         result.put("equalAvg", equalAvg);
         result.put("satisfactionAvg", satisfactionAvg);
-        result.put("finalAvg", finalAvg);
         return ok(result);
     }
 

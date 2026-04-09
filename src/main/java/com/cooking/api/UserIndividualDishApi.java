@@ -80,8 +80,6 @@ public class UserIndividualDishApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        int pageNo = params.getIntValue("pageNo");
-        int pageSize = params.getIntValue("pageSize");
         IPage<UserIndividualDishEntity> entityIPage = userIndividualDishService.findPage(new Page<>(pageNo, pageSize), params);
 
         Map<Long, DishEntity> dishEntityMap = dishService.findMapByIds(entityIPage.getRecords().stream().map(UserIndividualDishEntity::getDishId).collect(Collectors.toSet()));

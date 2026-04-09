@@ -75,13 +75,13 @@ public class DishEntity extends BaseEntity {
     private Long viewCount;
 
     /**
-     * 菜谱活跃值
+     * 菜谱活跃值, 菜谱收到评价会增加
      */
     @TableField("active_val")
     private Integer activeVal;
 
     /**
-     * 菜谱人气值
+     * 菜谱人气值, 菜谱收到收藏会增加
      */
     @TableField("popular_val")
     private Integer popularVal;

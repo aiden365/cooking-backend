@@ -58,6 +58,12 @@ public class DishCommentEntity extends BaseEntity {
     private String content;
 
     /**
+     * 评论点赞量
+     */
+    @TableField("start_count")
+    private Integer startCount;
+
+    /**
      * 评论用户ID
      */
     @TableField(exist = false)

@@ -136,9 +136,15 @@ public class DishApi extends BaseController {
         if(!BaseEntity.validId(dishId)){
             return fail("菜谱ID不能为空");
         }
+
         DishEntity dishEntity = dishService.getById(dishId);
-        Long count = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getDishId, dishId).eq(UserDishCollectEntity::getUserId, SystemContextHelper.getCurrentUser().getId()).count();
-        dishEntity.setUserCollected(count > 0);
+        Boolean userCollected = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getDishId, dishId).eq(UserDishCollectEntity::getUserId, SystemContextHelper.getCurrentUser().getId()).count() > 0;
+        Long collectCount = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getDishId, dishId).count();
+        Long shareCount = userShareService.lambdaQuery().eq(UserShareEntity::getDishId, dishId).count();
+        dishEntity.setShareCount(shareCount);
+        dishEntity.setCollectCount(collectCount);
+        dishEntity.setUserCollected(userCollected);
+
         return ok();
     }
 

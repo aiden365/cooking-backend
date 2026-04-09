@@ -53,6 +53,13 @@ public class UserShareCommentEntity extends BaseEntity {
     private String content;
 
     /**
+     * 评论点赞量
+     */
+    @TableField("start_count")
+    private Integer startCount;
+
+
+    /**
      * 用户名
      */
     @TableField(exist = false)
