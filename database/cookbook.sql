@@ -283,7 +283,7 @@ DROP TABLE IF EXISTS `tbl_user_label_rel`;
 CREATE TABLE `tbl_user_label_rel`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` bigint(255) NOT NULL COMMENT '用户ID',
-  `lable_id` bigint(20) NOT NULL COMMENT '标签ID',
+  `label_id` bigint(20) NOT NULL COMMENT '标签ID',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
   `update_time` datetime NOT NULL COMMENT '修改时间',

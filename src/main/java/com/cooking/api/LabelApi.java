@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
+
 /**
  * <p>
  * Label controller
@@ -56,35 +58,23 @@ public class LabelApi extends BaseController {
         return ok(entityIPage);
     }
 
-    @PostMapping("add")
-    public BaseResponse add(@RequestBody JSONObject params) {
-        String labelName = params.getString("labelName");
-        Integer type = params.getInteger("type");
-        validateLabelName(labelName);
-        validateLabelType(type);
 
-        LabelEntity labelEntity = new LabelEntity();
-        labelEntity.setLabelName(labelName.trim());
-        labelEntity.setType(type);
-        labelService.save(labelEntity);
-        return ok(labelEntity);
-    }
-
-    @PostMapping("update")
-    public BaseResponse update(@RequestBody JSONObject params) {
+    @PostMapping("save")
+    public BaseResponse save(@RequestBody JSONObject params) {
         Long id = params.getLong("id");
         String labelName = params.getString("labelName");
         Integer type = params.getInteger("type");
+        LabelEntity labelEntity = new LabelEntity();
 
-        if (id == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
+        if (id != null) {
+            labelEntity = labelService.getById(id);
+            if (labelEntity == null) {
+                throw new ApiException(BaseResponse.Code.fail.code, "标签不存在");
+            }
         }
-        LabelEntity labelEntity = labelService.getById(id);
-        if (labelEntity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "标签不存在");
-        }
-        Long count = labelService.lambdaQuery().eq(LabelEntity::getLabelName, labelName).count();
-        if (count > 0) {
+
+        LabelEntity sameNameLabel = labelService.lambdaQuery().eq(LabelEntity::getLabelName, labelName).one();
+        if (sameNameLabel != null && !sameNameLabel.getId().equals(id)) {
             throw new ApiException(BaseResponse.Code.fail.code, "标签已存在");
         }
 
@@ -96,7 +86,7 @@ public class LabelApi extends BaseController {
             validateLabelType(type);
             labelEntity.setType(type);
         }
-        labelService.updateById(labelEntity);
+        labelService.saveOrUpdate(labelEntity);
         return ok(labelEntity);
     }
 

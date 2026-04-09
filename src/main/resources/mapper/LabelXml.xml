@@ -4,8 +4,8 @@
 
     <select id="findPage" resultType="com.cooking.core.entity.LabelEntity">
         select * from tbl_label where 1=1
-        <if test="params.lableName != null and params.lableName != ''">
-            and lable_name like concat('%',#{params.lableName},'%')
+        <if test="params.search != null and params.search != ''">
+            and label_name like concat('%',#{params.search},'%')
         </if>
         <if test="params.type != null">
             and type = #{params.type}
