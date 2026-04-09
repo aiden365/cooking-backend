@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.cooking.base.BaseEntity;
 import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldNameConstants;
 
@@ -18,6 +21,8 @@ import lombok.experimental.FieldNameConstants;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @FieldNameConstants
 @Accessors(chain = true)
 @TableName("tbl_user_share_comment")

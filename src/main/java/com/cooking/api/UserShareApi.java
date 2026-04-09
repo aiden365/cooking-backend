@@ -91,7 +91,7 @@ public class UserShareApi extends BaseController {
         }
 
 
-        UserShareEntity userShareEntity = new UserShareEntity();
+        UserShareEntity userShareEntity = UserShareEntity.builder().build();
         userShareEntity.setUserId(userEntity.getId());
         userShareEntity.setDishId(dishEntity.getId());
         userShareEntity.setDishImg(dishImg);
