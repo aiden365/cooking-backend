@@ -64,6 +64,12 @@ public class DishApi extends BaseController {
     private UserDishCollectService userDishCollectService;
     @Autowired
     private UserShareService userShareService;
+    @Autowired
+    private DishFlavorService dishFlavorService;
+    @Autowired
+    private DishMaterialService dishMaterialService;
+    @Autowired
+    private DishStepService dishStepService;
 
 
 
@@ -89,13 +95,18 @@ public class DishApi extends BaseController {
         String search = params.getString("search");
         List<Long> dishIds = params.getList("dishId", Long.class);
         Long labelId = params.getLong("labelId");
+        Integer checkStatus = params.getInteger("checkStatus");
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("search", search);
         queryParams.put("dishIds", dishIds);
         queryParams.put("labelId", labelId);
+        queryParams.put("checkStatus", checkStatus);
 
         IPage<DishEntity> dishEntityPage = dishService.findPage(new Page<>(pageNo, pageSize), queryParams);
         List<Long> dishEntityIds = dishEntityPage.getRecords().stream().map(BaseEntity::getId).toList();
+        if (dishEntityIds.isEmpty()) {
+            return ok(dishEntityPage);
+        }
 
         Map<Long, DishLabelRelEntity> labelRelEntityMap = dishLableRelService.findMapByField(DishLabelRelEntity.Fields.dishId, dishEntityIds);
         Map<Long, LabelEntity> labelMap = labelService.findMapByIds(labelRelEntityMap.values().stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet()));
@@ -117,6 +128,14 @@ public class DishApi extends BaseController {
             dish.setShareCount(userShareMap.values().stream().filter(share -> share.getDishId().equals(dish.getId())).count());
         });
 
+        Map<Long, Long> flavorCountMap = dishFlavorService.lambdaQuery().in(DishFlavorEntity::getDishId, dishEntityIds).list().stream().collect(Collectors.groupingBy(DishFlavorEntity::getDishId, Collectors.counting()));
+        Map<Long, Long> materialCountMap = dishMaterialService.lambdaQuery().in(DishMaterialEntity::getDishId, dishEntityIds).list().stream().collect(Collectors.groupingBy(DishMaterialEntity::getDishId, Collectors.counting()));
+        Map<Long, Long> stepCountMap = dishStepService.lambdaQuery().in(DishStepEntity::getDishId, dishEntityIds).list().stream().collect(Collectors.groupingBy(DishStepEntity::getDishId, Collectors.counting()));
+        dishEntityPage.getRecords().forEach(dish -> {
+            dish.setFlavorCount(flavorCountMap.getOrDefault(dish.getId(), 0L).intValue());
+            dish.setMaterialCount(materialCountMap.getOrDefault(dish.getId(), 0L).intValue());
+            dish.setStepCount(stepCountMap.getOrDefault(dish.getId(), 0L).intValue());
+        });
 
         return ok(dishEntityPage);
     }

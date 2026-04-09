@@ -124,5 +124,22 @@ public class DishEntity extends BaseEntity {
     @TableField(exist = false)
     private Boolean userCollected;
 
+    /**
+     * 调料数量
+     */
+    @TableField(exist = false)
+    private Integer flavorCount;
+
+    /**
+     * 食材数量
+     */
+    @TableField(exist = false)
+    private Integer materialCount;
+
+    /**
+     * 制作步骤数量
+     */
+    @TableField(exist = false)
+    private Integer stepCount;
 
 }

@@ -13,6 +13,10 @@
         <if test="params.search != null">
             and name like concat('%',#{params.search},'%')
         </if>
+        <if test="params.checkStatus != null">
+            and check_status = #{params.checkStatus}
+        </if>
+
         <if test="params.name != null">
             and exists(select 1 from tbl_dish_label_rel where dish_id = tbl_dish.id and label_id = #{params.labelId})
         </if>
