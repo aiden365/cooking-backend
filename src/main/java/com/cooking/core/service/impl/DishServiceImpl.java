@@ -13,11 +13,14 @@ import com.cooking.core.service.DishMaterialService;
 import com.cooking.core.service.DishService;
 import com.cooking.core.service.DishStepService;
 import com.cooking.dto.AIRecipeDTO;
+import com.cooking.dto.DishSaveDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,6 +58,111 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     @Override
     public void deleteByIds(Set<String> ids) {
 
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DishEntity saveDish(DishSaveDTO dishSaveDTO) {
+        DishEntity dishEntity;
+        boolean isCreate = dishSaveDTO.getId() == null;
+        if (isCreate) {
+            dishEntity = new DishEntity();
+            dishEntity.setSourceType(1);
+            dishEntity.setViewCount(0L);
+            dishEntity.setActiveVal(0);
+            dishEntity.setPopularVal(0);
+        } else {
+            dishEntity = super.getById(dishSaveDTO.getId());
+            if (dishEntity == null) {
+                throw new IllegalArgumentException("菜谱不存在");
+            }
+        }
+
+        dishEntity.setName(dishSaveDTO.getName());
+        dishEntity.setTakeTimes(dishSaveDTO.getTakeTimes());
+        dishEntity.setCheckStatus(dishSaveDTO.getCheckStatus());
+        dishEntity.setTips(dishSaveDTO.getTips());
+        dishEntity.setImgPath(dishSaveDTO.getImgPath());
+        super.saveOrUpdate(dishEntity);
+
+        List<DishFlavorEntity> existingFlavors = dishFlavorService.lambdaQuery()
+                .eq(DishFlavorEntity::getDishId, dishEntity.getId())
+                .list();
+        Set<Long> retainFlavorIds = new HashSet<>();
+        if (dishSaveDTO.getFlavors() != null) {
+            for (DishSaveDTO.FlavorItem flavorItem : dishSaveDTO.getFlavors()) {
+                if (flavorItem == null || !StringUtils.hasText(flavorItem.getFlavorName())) {
+                    continue;
+                }
+                DishFlavorEntity entity = flavorItem.getId() == null ? new DishFlavorEntity() : dishFlavorService.getById(flavorItem.getId());
+                if (entity == null) {
+                    entity = new DishFlavorEntity();
+                }
+                if (entity.getId() != null && !dishEntity.getId().equals(entity.getDishId())) {
+                    throw new IllegalArgumentException("调料数据不属于当前菜谱");
+                }
+                entity.setDishId(dishEntity.getId());
+                entity.setFlavorName(flavorItem.getFlavorName());
+                entity.setDosage(flavorItem.getDosage());
+                dishFlavorService.saveOrUpdate(entity);
+                retainFlavorIds.add(entity.getId());
+            }
+        }
+        deleteRemovedFlavors(existingFlavors, retainFlavorIds);
+
+        List<DishMaterialEntity> existingMaterials = dishMaterialService.lambdaQuery()
+                .eq(DishMaterialEntity::getDishId, dishEntity.getId())
+                .list();
+        Set<Long> retainMaterialIds = new HashSet<>();
+        if (dishSaveDTO.getMaterials() != null) {
+            for (DishSaveDTO.MaterialItem materialItem : dishSaveDTO.getMaterials()) {
+                if (materialItem == null || !StringUtils.hasText(materialItem.getMaterialName())) {
+                    continue;
+                }
+                DishMaterialEntity entity = materialItem.getId() == null ? new DishMaterialEntity() : dishMaterialService.getById(materialItem.getId());
+                if (entity == null) {
+                    entity = new DishMaterialEntity();
+                }
+                if (entity.getId() != null && !dishEntity.getId().equals(entity.getDishId())) {
+                    throw new IllegalArgumentException("食材数据不属于当前菜谱");
+                }
+                entity.setDishId(dishEntity.getId());
+                entity.setMaterialName(materialItem.getMaterialName());
+                entity.setDosage(materialItem.getDosage());
+                entity.setRemark(materialItem.getDeal());
+                dishMaterialService.saveOrUpdate(entity);
+                retainMaterialIds.add(entity.getId());
+            }
+        }
+        deleteRemovedMaterials(existingMaterials, retainMaterialIds);
+
+        List<DishStepEntity> existingSteps = dishStepService.lambdaQuery()
+                .eq(DishStepEntity::getDishId, dishEntity.getId())
+                .list();
+        Set<Long> retainStepIds = new HashSet<>();
+        if (dishSaveDTO.getSteps() != null) {
+            for (DishSaveDTO.StepItem stepItem : dishSaveDTO.getSteps()) {
+                if (stepItem == null || !StringUtils.hasText(stepItem.getStepDescribe())) {
+                    continue;
+                }
+                DishStepEntity entity = stepItem.getId() == null ? new DishStepEntity() : dishStepService.getById(stepItem.getId());
+                if (entity == null) {
+                    entity = new DishStepEntity();
+                }
+                if (entity.getId() != null && !dishEntity.getId().equals(entity.getDishId())) {
+                    throw new IllegalArgumentException("步骤数据不属于当前菜谱");
+                }
+                entity.setDishId(dishEntity.getId());
+                entity.setSort(stepItem.getOrder());
+                entity.setStepDescribe(stepItem.getStepDescribe());
+                entity.setStepImages(buildStepImages(stepItem.getStepImage()));
+                dishStepService.saveOrUpdate(entity);
+                retainStepIds.add(entity.getId());
+            }
+        }
+        deleteRemovedSteps(existingSteps, retainStepIds);
+
+        return dishEntity;
     }
 
     @Override
@@ -131,5 +239,42 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         }
 
         return dishEntity;
+    }
+
+    private String buildStepImages(String stepImage) {
+        if (!StringUtils.hasText(stepImage)) {
+            return "[]";
+        }
+        return "[\"" + stepImage.replace("\"", "\\\"") + "\"]";
+    }
+
+    private void deleteRemovedFlavors(List<DishFlavorEntity> existingFlavors, Set<Long> retainFlavorIds) {
+        List<Long> removeIds = existingFlavors.stream()
+                .map(DishFlavorEntity::getId)
+                .filter(id -> !retainFlavorIds.contains(id))
+                .toList();
+        if (!removeIds.isEmpty()) {
+            dishFlavorService.removeByIds(removeIds);
+        }
+    }
+
+    private void deleteRemovedMaterials(List<DishMaterialEntity> existingMaterials, Set<Long> retainMaterialIds) {
+        List<Long> removeIds = existingMaterials.stream()
+                .map(DishMaterialEntity::getId)
+                .filter(id -> !retainMaterialIds.contains(id))
+                .toList();
+        if (!removeIds.isEmpty()) {
+            dishMaterialService.removeByIds(removeIds);
+        }
+    }
+
+    private void deleteRemovedSteps(List<DishStepEntity> existingSteps, Set<Long> retainStepIds) {
+        List<Long> removeIds = existingSteps.stream()
+                .map(DishStepEntity::getId)
+                .filter(id -> !retainStepIds.contains(id))
+                .toList();
+        if (!removeIds.isEmpty()) {
+            dishStepService.removeByIds(removeIds);
+        }
     }
 }

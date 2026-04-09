@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
 import com.cooking.core.entity.DishEntity;
 import com.cooking.dto.AIRecipeDTO;
+import com.cooking.dto.DishSaveDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -26,4 +27,6 @@ public interface DishService extends BaseService<DishEntity> {
     void deleteByIds(Set<String> ids);
 
     DishEntity saveAigcRecipe(AIRecipeDTO aiRecipeDTO);
+
+    DishEntity saveDish(DishSaveDTO dishSaveDTO);
 }

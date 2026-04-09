@@ -69,6 +69,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 菜品食材管理接口开发 (已完成)
     - [x] 菜品制作步骤管理接口开发 (已完成)
     - [x] 保存菜品标签接口开发 (已完成)
+    - [ ] 保存菜品信息接口开发 (当前进行)
 - [x] **阶段 3: 标签模块 (Lable Module)**
     - [x] 标签模块接口开发 (已完成)
 - [x] **阶段 4: 知识库模块 (Lable Module)**
@@ -77,7 +78,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 - [x] **阶段 5: 系统首页 (Lable Module)**
   - [x] 完成系统首页的数据统计接口开发 (已完成)
   - [x] 完成系统首页的菜谱审核统计接口开发 (已完成)
-  - [ ] 完成系统首页的菜谱动态统计接口开发 (已完成)
+  - [x] 完成系统首页的菜谱动态统计接口开发 (已完成)
 - [x] **阶段 6: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
     - [x] 菜谱智能生成接口开发 (已完成)
@@ -85,7 +86,56 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`完成系统首页的菜谱动态统计接口开发`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/IndexApi.java中实现。 创建统计接口 dishDynamicsData。
-> 2：接口 dishDynamicsData，以列表形式返回最近30天菜谱动态信息，包括每天ai生成数量和人工审核数量，大致结构: [{"day":"2026年4月9日","aigcCount":10,"checkCount":9},{"day":"2026年4月8日","aigcCount":10,"checkCount":9}]
-> 3：要求按照日期天数的倒序排列
+> 现在，让我们开始`保存菜品信息接口开发`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/DishApi.java中实现。 创建保存菜谱接口 save。
+> 2：接口接收 `菜谱信息` json 为参数，要求能够将创建对应的DishSaveDTO来接收参数，并能将DTO数据转为 对应的实体类，如DishEntity, DishFlavorEntity, DishMaterialEntity, DishStepEntity。
+> 3：要求能够根据id对菜谱进行添加或修改，并且对于菜谱调料，菜谱食材，制作步骤，能够根据其中的id添加或修改
+
+
+
+```json 菜谱信息
+
+{
+    "id": null,
+    "name": "菜名",
+    "takeTimes": "15",
+    "checkStatus": 1,
+    "tips": "这是一个测试菜谱",
+    "imgPath": "",
+    "flavors": [
+        {
+            "id": null,
+            "flavorName": "盐",
+            "dosage": "5g"
+        },
+        {
+            "id": null,
+            "flavorName": "食用油",
+            "dosage": "5ml"
+        }
+    ],
+    "materials": [
+        {
+            "id": null,
+            "materialName": "食材1",
+            "dosage": "1个",
+            "deal": "食材1处理方式"
+        }
+    ],
+    "steps": [
+        {
+            "id": null,
+            "order": 1,
+            "stepDescribe": "这是测试菜谱的制作步骤1",
+            "stepImage": "图片相对地址"
+        },
+        {
+            "id": null,
+            "order": 2,
+            "stepDescribe": "这是测试菜谱的制作步骤2",
+            "stepImage": "图片相对地址"
+        }
+    ]
+}
+
+```

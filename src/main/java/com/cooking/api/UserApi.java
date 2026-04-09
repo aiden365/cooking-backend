@@ -93,18 +93,25 @@ public class UserApi extends BaseController {
         String userCode = params.getString("userCode");
         String password = params.getString("password");
         String digestedHex = MD5.create().digestHex(password);
-        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getUserCode, userCode)
-                .eq(UserEntity::getUserPass, digestedHex).list().stream().findAny().orElse(null);
+        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getUserCode, userCode).eq(UserEntity::getUserPass, digestedHex).list().stream().findAny().orElse(null);
         if (userEntity == null) {
             return fail("用户不存在");
         }
         String token = UUID.randomUUID().toString();
         stringRedisTemplate.opsForValue().set(token, userEntity.getId().toString());
         JSONObject res = new JSONObject();
-        res.put("user", userEntity);
-        res.put("token", token);
+        res.put("avatar", null);
+        res.put("username", userEntity.getUserName());
+        res.put("nickname", userEntity.getUserName());
+        res.put("roles", Collections.singleton("admin"));
+        res.put("permissions", Collections.emptyList());
+        res.put("accessToken", Collections.emptyList());
+        res.put("refreshToken", token);
+        res.put("expires", "2099/01/01 00:00:00");
+
         return ok(res);
     }
+
 
     @PostMapping("register")
     public BaseResponse register(@RequestBody UserRegisterDTO params) {

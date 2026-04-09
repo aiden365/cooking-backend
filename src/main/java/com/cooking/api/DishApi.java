@@ -13,6 +13,7 @@ import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.*;
 import com.cooking.core.service.*;
 import com.cooking.dto.AIRecipeDTO;
+import com.cooking.dto.DishSaveDTO;
 import com.cooking.exceptions.ApiException;
 import com.cooking.utils.SystemContextHelper;
 import jakarta.annotation.Resource;
@@ -146,6 +147,27 @@ public class DishApi extends BaseController {
         dishEntity.setUserCollected(userCollected);
 
         return ok();
+    }
+
+    @PostMapping("save")
+    public BaseResponse save(@RequestBody DishSaveDTO dishSaveDTO) {
+        if (!StringUtils.hasText(dishSaveDTO.getName())) {
+            throw new ApiException(BaseResponse.Code.fail.code, "菜名不能为空");
+        }
+        if (!StringUtils.hasText(dishSaveDTO.getTakeTimes())) {
+            throw new ApiException(BaseResponse.Code.fail.code, "预计用时不能为空");
+        }
+        if (dishSaveDTO.getCheckStatus() == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "审核状态不能为空");
+        }
+
+        DishEntity dishEntity;
+        try {
+            dishEntity = dishService.saveDish(dishSaveDTO);
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(BaseResponse.Code.fail.code, e.getMessage());
+        }
+        return ok(dishEntity);
     }
 
     /**
