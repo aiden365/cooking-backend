@@ -37,7 +37,7 @@ public class CodeGenerator {
                             .xml("mapper.xml"); // 设置 Mapper XML 文件包名
                 })
                 .strategyConfig(builder -> {
-                    builder.addInclude("tbl_nutrition") // 设置需要生成的表名
+                    builder.addInclude("tbl_user_individual_dish") // 设置需要生成的表名
                             .addTablePrefix("tbl_")
                             .entityBuilder()
                             .superClass(BaseEntity.class)

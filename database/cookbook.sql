@@ -290,23 +290,6 @@ CREATE TABLE `tbl_user_label_rel`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户标签关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for tbl_user_nutrition
--- ----------------------------
-DROP TABLE IF EXISTS `tbl_user_nutrition`;
-CREATE TABLE `tbl_user_nutrition`  (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
-  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '营养名称',
-  `aim_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '目标值',
-  `create_time` datetime NOT NULL COMMENT '创建时间',
-  `create_user` bigint(20) NOT NULL COMMENT '创建人',
-  `update_time` datetime NOT NULL COMMENT '修改时间',
-  `update_user` bigint(20) NOT NULL COMMENT '修改人',
-  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '删除标识',
-  PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户营养标准表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
 -- Table structure for tbl_user_nutrition_rel
 -- ----------------------------
 DROP TABLE IF EXISTS `tbl_user_nutrition_rel`;

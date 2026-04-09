@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseResponse;
+import com.cooking.core.entity.NutritionEntity;
 import com.cooking.core.entity.SystemParamsEntity;
 import com.cooking.core.entity.UserEntity;
 import com.cooking.core.entity.UserNutritionRelEntity;
+import com.cooking.core.service.NutritionService;
 import com.cooking.core.service.SystemParamsService;
 import com.cooking.core.service.UserNutritionRelService;
 import com.cooking.core.service.UserService;
@@ -39,6 +41,8 @@ public class UserNutritionApi extends BaseController {
     @Autowired
     private UserNutritionRelService userNutritionRelService;
     @Autowired
+    private NutritionService nutritionService;
+    @Autowired
     private SystemParamsService systemParamsService;
     @Autowired
     private UserService userService;
@@ -63,14 +67,14 @@ public class UserNutritionApi extends BaseController {
         String aimValue = params.getString("aimValue");
 
         UserEntity userEntity = validateUser(userId);
-        validateText(aimValue, "目标值");
+        validateText(aimValue, "营养目标值");
 
         if(!BaseEntity.validId(nutritionId)){
-            throw new ApiException(BaseResponse.Code.fail.code, "营养目标不存在");
+            throw new ApiException(BaseResponse.Code.fail.code, "营养元素不存在");
         }
-
-        if(!BaseEntity.validId(nutritionId)){
-
+        NutritionEntity nutrition = nutritionService.getById(nutritionId);
+        if(nutrition == null){
+            throw new ApiException(BaseResponse.Code.fail.code, "营养元素不存在");
         }
 
         UserNutritionRelEntity entity;

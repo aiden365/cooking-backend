@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cooking.core.mapper.UserIndividualDishMapper">
+
+    <select id="findPage" resultType="com.cooking.core.entity.UserIndividualDishEntity">
+        select * from tbl_user_individual_dish uid where 1=1
+        <if test="params.userId != null">
+            and uid.user_id = #{params.userId}
+        </if>
+        <if test="params.search != null">
+            and exists(select 1 from tbl_dish where tbl_dish.id = uid.dish_id and tbl_dish.name = concat('%',#{params.search},'%'))
+        </if>
+        order by create_time desc
+    </select>
+</mapper>
