@@ -125,7 +125,7 @@ CREATE TABLE `tbl_dish_step`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `dish_id` bigint(20) NOT NULL COMMENT '菜谱ID',
   `step_describe` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '步骤描述',
-  `step_images` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '步骤图示，以JSON数组格式存储，如：[\"图片1\",\"图片2\",\"图片3\"]',
+  `step_image` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '步骤图示',
   `sort` int(11) NOT NULL COMMENT '步骤序号',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',
@@ -141,7 +141,7 @@ CREATE TABLE `tbl_dish_step`  (
 DROP TABLE IF EXISTS `tbl_label`;
 CREATE TABLE `tbl_label`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `lable_name` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '标签名',
+  `label_name` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '标签名',
   `type` int(11) NOT NULL COMMENT '标签类型：1=用户标签，2=菜品标签',
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `create_user` bigint(20) NULL DEFAULT NULL COMMENT '创建人',

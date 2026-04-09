@@ -41,10 +41,10 @@ public class DishStepEntity extends BaseEntity {
     private String stepDescribe;
 
     /**
-     * 步骤图示，以JSON数组格式存储，如：["图片1","图片2","图片3"]
+     * 步骤图示
      */
-    @TableField("step_images")
-    private String stepImages;
+    @TableField("step_image")
+    private String stepImage;
 
     /**
      * 步骤序号

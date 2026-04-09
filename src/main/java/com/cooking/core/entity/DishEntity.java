@@ -100,11 +100,6 @@ public class DishEntity extends BaseEntity {
     @TableField("total_score")
     private Integer totalScore;
 
-    /**
-     * 菜谱标签
-     */
-    @TableField(exist = false)
-    private List<String> labelList;
 
     /**
      * 菜谱收藏量
@@ -142,4 +137,27 @@ public class DishEntity extends BaseEntity {
     @TableField(exist = false)
     private Integer stepCount;
 
+    /**
+     * 标签列表
+     */
+    @TableField(exist = false)
+    private List<String> labelNames;
+
+    /**
+     * 调料列表
+     */
+    @TableField(exist = false)
+    private List<DishFlavorEntity> flavorList;
+
+    /**
+     * 食材列表
+     */
+    @TableField(exist = false)
+    private List<DishMaterialEntity> materialList;
+
+    /**
+     * 制作步骤列表
+     */
+    @TableField(exist = false)
+    private List<DishStepEntity> stepList;
 }

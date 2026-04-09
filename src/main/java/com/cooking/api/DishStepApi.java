@@ -70,7 +70,7 @@ public class DishStepApi extends BaseController {
                              @RequestParam(value = "dishId", required = false) Long dishId,
                              @RequestParam(value = "stepDescribe", required = false) String stepDescribe,
                              @RequestParam(value = "sort", required = false) Integer sort,
-                             @RequestParam(value = "stepImages", required = false) String stepImages,
+                             @RequestParam(value = "stepImage", required = false) String stepImage,
                              @RequestPart(value = "files", required = false) MultipartFile[] files) {
 
         DishStepEntity dishStepEntity;
@@ -85,12 +85,11 @@ public class DishStepApi extends BaseController {
 
         validateBasicParams(dishId, stepDescribe, sort);
 
-        String finalStepImages = buildStepImagesValue(dishId, files, stepImages, dishStepEntity.getStepImages());
 
         dishStepEntity.setDishId(dishId);
         dishStepEntity.setStepDescribe(stepDescribe.trim());
         dishStepEntity.setSort(sort);
-        dishStepEntity.setStepImages(finalStepImages);
+        dishStepEntity.setStepImage(stepImage);
 
         dishStepService.saveOrUpdate(dishStepEntity);
         return ok(dishStepEntity);
@@ -107,7 +106,6 @@ public class DishStepApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "步骤不存在");
         }
         dishStepService.removeById(id);
-        JSONArray.from(dishStepEntity.getStepImages()).stream().map(e->e.toString()).forEach(this::deleteFileByRelativePath);
 
         return ok();
     }

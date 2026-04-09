@@ -129,7 +129,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
                 entity.setDishId(dishEntity.getId());
                 entity.setMaterialName(materialItem.getMaterialName());
                 entity.setDosage(materialItem.getDosage());
-                entity.setRemark(materialItem.getDeal());
+                entity.setDeal(materialItem.getDeal());
                 dishMaterialService.saveOrUpdate(entity);
                 retainMaterialIds.add(entity.getId());
             }
@@ -153,9 +153,9 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
                     throw new IllegalArgumentException("步骤数据不属于当前菜谱");
                 }
                 entity.setDishId(dishEntity.getId());
-                entity.setSort(stepItem.getOrder());
+                entity.setSort(stepItem.getSort());
                 entity.setStepDescribe(stepItem.getStepDescribe());
-                entity.setStepImages(buildStepImages(stepItem.getStepImage()));
+                entity.setStepImage(stepItem.getStepImage());
                 dishStepService.saveOrUpdate(entity);
                 retainStepIds.add(entity.getId());
             }
@@ -194,7 +194,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
                 entity.setDishId(dishEntity.getId());
                 entity.setMaterialName(material.getName());
                 entity.setDosage(material.getDosage());
-                entity.setRemark(material.getDeal());
+                entity.setDeal(material.getDeal());
                 materials.add(entity);
             }
         }
@@ -230,7 +230,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
                 entity.setDishId(dishEntity.getId());
                 entity.setStepDescribe(step.getInstruction());
                 entity.setSort(step.getStepNumber() == null ? (i + 1) : step.getStepNumber());
-                entity.setStepImages("[]");
+                entity.setStepImage(null);
                 steps.add(entity);
             }
         }

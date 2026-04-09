@@ -7,8 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldNameConstants;
 
@@ -53,6 +51,6 @@ public class DishMaterialEntity extends BaseEntity {
      * 备注
      */
     @TableField("deal")
-    private String remark;
+    private String deal;
 
 }

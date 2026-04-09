@@ -38,18 +38,14 @@ public class DishSaveDTO {
         private Long id;
         private String materialName;
         private String dosage;
-        @JSONField(name = "deal")
         private String deal;
     }
 
     @Data
     public static class StepItem {
         private Long id;
-        @JSONField(name = "order")
-        private Integer order;
-        @JSONField(name = "stepDescribe", alternateNames = {"description"})
+        private Integer sort;
         private String stepDescribe;
-        @JSONField(name = "stepImage")
         private String stepImage;
     }
 }

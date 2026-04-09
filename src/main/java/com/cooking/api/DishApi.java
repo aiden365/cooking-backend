@@ -30,6 +30,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -70,6 +71,16 @@ public class DishApi extends BaseController {
     private DishMaterialService dishMaterialService;
     @Autowired
     private DishStepService dishStepService;
+    @Autowired
+    private DishAppraisesService dishAppraisesService;
+    @Autowired
+    private DishCommentService dishCommentService;
+    @Autowired
+    private UserShareCommentService userShareCommentService;
+    @Autowired
+    private UserIndividualDishService userIndividualDishService;
+    @Autowired
+    private UserDietRecordService userDietRecordService;
 
 
 
@@ -111,11 +122,11 @@ public class DishApi extends BaseController {
         Map<Long, DishLabelRelEntity> labelRelEntityMap = dishLableRelService.findMapByField(DishLabelRelEntity.Fields.dishId, dishEntityIds);
         Map<Long, LabelEntity> labelMap = labelService.findMapByIds(labelRelEntityMap.values().stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet()));
         labelRelEntityMap.values().stream().filter(rel -> labelMap.containsKey(rel.getLabelId())).forEach(rel -> {
-            rel.setLabelName(labelMap.get(rel.getLabelId()).getLableName());
+            rel.setLabelName(labelMap.get(rel.getLabelId()).getLabelName());
         });
         dishEntityPage.getRecords().forEach(dish -> {
             List<DishLabelRelEntity> relEntities = labelRelEntityMap.values().stream().filter(rel -> rel.getDishId().equals(dish.getId())).toList();
-            dish.setLabelList(relEntities.stream().map(DishLabelRelEntity::getLabelName).toList());
+            dish.setLabelNames(relEntities.stream().map(DishLabelRelEntity::getLabelName).toList());
         });
 
         Map<Long, UserDishCollectEntity> dishCollectMap = userDishCollectService.findMapByField(UserDishCollectEntity.Fields.dishId, dishEntityIds);
@@ -161,10 +172,84 @@ public class DishApi extends BaseController {
         Boolean userCollected = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getDishId, dishId).eq(UserDishCollectEntity::getUserId, SystemContextHelper.getCurrentUser().getId()).count() > 0;
         Long collectCount = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getDishId, dishId).count();
         Long shareCount = userShareService.lambdaQuery().eq(UserShareEntity::getDishId, dishId).count();
+        List<DishFlavorEntity> flavorEntityList = dishFlavorService.lambdaQuery().eq(DishFlavorEntity::getDishId, dishId).list();
+        List<DishMaterialEntity> materialEntityList = dishMaterialService.lambdaQuery().eq(DishMaterialEntity::getDishId, dishId).list();
+        List<DishStepEntity> stepEntityList = dishStepService.lambdaQuery().eq(DishStepEntity::getDishId, dishId).orderByAsc(DishStepEntity::getSort).list();
+        int flavorCount = flavorEntityList.size();
+        int materialCount = materialEntityList.size();
+        int stepCount = stepEntityList.size();
+        List<DishLabelRelEntity> relList = dishLableRelService.lambdaQuery().eq(DishLabelRelEntity::getDishId, dishId).list();
+        List<LabelEntity> labelEntityList = labelService.listByIds(relList.stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet()));
+
         dishEntity.setShareCount(shareCount);
         dishEntity.setCollectCount(collectCount);
         dishEntity.setUserCollected(userCollected);
+        dishEntity.setFlavorCount(flavorCount);
+        dishEntity.setMaterialCount(materialCount);
+        dishEntity.setStepCount(stepCount);
+        dishEntity.setLabelNames(labelEntityList.stream().map(LabelEntity::getLabelName).toList());
+        dishEntity.setFlavorList(flavorEntityList);
+        dishEntity.setMaterialList(materialEntityList);
+        dishEntity.setStepList(stepEntityList);
 
+        return ok(dishEntity);
+    }
+
+    @PostMapping("labels")
+    public BaseResponse labels(@RequestBody JSONObject params) {
+        Long dishId = params.getLong("dishId");
+        if (!BaseEntity.validId(dishId)) {
+            return fail("dishId不能为空");
+        }
+
+        List<DishLabelRelEntity> relList = dishLableRelService.lambdaQuery().eq(DishLabelRelEntity::getDishId, dishId).list();
+        if (relList.isEmpty()) {
+            return ok(Collections.emptyList());
+        }
+
+        List<LabelEntity> labelEntityList = labelService.listByIds(relList.stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet()));
+
+        return ok(labelEntityList);
+    }
+
+    @PostMapping("delete")
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse delete(@RequestBody JSONObject params) {
+        List<Long> ids = params.getList("ids", Long.class);
+        if (ids == null || ids.isEmpty()) {
+            return fail("ids不能为空");
+        }
+
+        List<UserShareEntity> shareList = userShareService.lambdaQuery().in(UserShareEntity::getDishId, ids).list();
+        List<Long> shareIds = shareList.stream().map(UserShareEntity::getId).toList();
+
+        if (!shareIds.isEmpty()) {
+            userShareCommentService.lambdaUpdate().in(UserShareCommentEntity::getUserShareId, shareIds).remove();
+        }
+
+        userShareService.lambdaUpdate().in(UserShareEntity::getDishId, ids).remove();
+        userDishCollectService.lambdaUpdate().in(UserDishCollectEntity::getDishId, ids).remove();
+        userIndividualDishService.lambdaUpdate().in(UserIndividualDishEntity::getDishId, ids).remove();
+        userDietRecordService.lambdaUpdate().in(UserDietRecordEntity::getDishId, ids).remove();
+        dishAppraisesService.lambdaUpdate().in(DishAppraisesEntity::getDishId, ids).remove();
+        dishCommentService.lambdaUpdate().in(DishCommentEntity::getDishId, ids).remove();
+        dishLableRelService.lambdaUpdate().in(DishLabelRelEntity::getDishId, ids).remove();
+        dishMaterialService.lambdaUpdate().in(DishMaterialEntity::getDishId, ids).remove();
+        dishFlavorService.lambdaUpdate().in(DishFlavorEntity::getDishId, ids).remove();
+        dishStepService.lambdaUpdate().in(DishStepEntity::getDishId, ids).remove();
+
+        List<Document> dishDocuments = new ArrayList<>();
+        for (Long dishId : ids) {
+            List<Document> documents = dishVectorStore.similaritySearch(SearchRequest.builder().query("").filterExpression(new FilterExpressionBuilder().eq("dishId", dishId.toString()).build()).build());
+            if (documents != null && !documents.isEmpty()) {
+                dishDocuments.addAll(documents);
+            }
+        }
+        if (!dishDocuments.isEmpty()) {
+            dishVectorStore.delete(dishDocuments.stream().map(Document::getId).toList());
+        }
+
+        dishService.removeByIds(ids);
         return ok();
     }
 

@@ -116,7 +116,7 @@ public class UserIndividualDishApi extends BaseController {
         }
 
         Map<Long, LabelEntity> labelMap = labelService.findMapByIds(labelIds.stream().collect(Collectors.toSet()));
-        List<LabelEntity> labels = labelIds.stream().map(labelMap::get).filter(label -> label != null && StringUtils.hasText(label.getLableName())).toList();
+        List<LabelEntity> labels = labelIds.stream().map(labelMap::get).filter(label -> label != null && StringUtils.hasText(label.getLabelName())).toList();
         if (labels.isEmpty()) {
             throw new ApiException(BaseResponse.Code.fail.code, "未找到有效标签");
         }
@@ -195,7 +195,7 @@ public class UserIndividualDishApi extends BaseController {
 
     private String buildDietaryPreferenceText(List<LabelEntity> labels) {
         return labels.stream()
-                .map(LabelEntity::getLableName)
+                .map(LabelEntity::getLabelName)
                 .filter(StringUtils::hasText)
                 .collect(Collectors.joining("、"));
     }
@@ -208,7 +208,7 @@ public class UserIndividualDishApi extends BaseController {
                 .map(material -> "%s：%s%s".formatted(
                         defaultText(material.getMaterialName()),
                         defaultText(material.getDosage()),
-                        StringUtils.hasText(material.getRemark()) ? "，处理方式：" + material.getRemark() : ""
+                        StringUtils.hasText(material.getDeal()) ? "，处理方式：" + material.getDeal() : ""
                 ))
                 .collect(Collectors.joining("\n"));
     }

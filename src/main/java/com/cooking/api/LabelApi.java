@@ -64,7 +64,7 @@ public class LabelApi extends BaseController {
         validateLabelType(type);
 
         LabelEntity labelEntity = new LabelEntity();
-        labelEntity.setLableName(labelName.trim());
+        labelEntity.setLabelName(labelName.trim());
         labelEntity.setType(type);
         labelService.save(labelEntity);
         return ok(labelEntity);
@@ -83,14 +83,14 @@ public class LabelApi extends BaseController {
         if (labelEntity == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "标签不存在");
         }
-        Long count = labelService.lambdaQuery().eq(LabelEntity::getLableName, labelName).count();
+        Long count = labelService.lambdaQuery().eq(LabelEntity::getLabelName, labelName).count();
         if (count > 0) {
             throw new ApiException(BaseResponse.Code.fail.code, "标签已存在");
         }
 
         if (labelName != null) {
             validateLabelName(labelName);
-            labelEntity.setLableName(labelName.trim());
+            labelEntity.setLabelName(labelName.trim());
         }
         if (type != null) {
             validateLabelType(type);

@@ -31,8 +31,8 @@ public class LabelEntity extends BaseEntity {
     /**
      * 标签名
      */
-    @TableField("lable_name")
-    private String lableName;
+    @TableField("label_name")
+    private String labelName;
 
     /**
      * 标签类型：1=用户标签，2=菜品标签

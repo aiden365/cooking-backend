@@ -65,7 +65,7 @@ public class DishMaterialApi extends BaseController {
         dishMaterialEntity.setDishId(dishId);
         dishMaterialEntity.setMaterialName(materialName.trim());
         dishMaterialEntity.setDosage(dosage.trim());
-        dishMaterialEntity.setRemark(remark.trim());
+        dishMaterialEntity.setDeal(remark.trim());
         dishMaterialService.save(dishMaterialEntity);
         return ok(dishMaterialEntity);
     }
@@ -91,7 +91,7 @@ public class DishMaterialApi extends BaseController {
         dishMaterialEntity.setDishId(dishId);
         dishMaterialEntity.setMaterialName(materialName.trim());
         dishMaterialEntity.setDosage(dosage.trim());
-        dishMaterialEntity.setRemark(remark.trim());
+        dishMaterialEntity.setDeal(remark.trim());
         dishMaterialService.updateById(dishMaterialEntity);
         return ok(dishMaterialEntity);
     }
