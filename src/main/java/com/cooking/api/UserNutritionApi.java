@@ -4,12 +4,13 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
+import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.SystemParamsEntity;
 import com.cooking.core.entity.UserEntity;
-import com.cooking.core.entity.UserNutritionEntity;
+import com.cooking.core.entity.UserNutritionRelEntity;
 import com.cooking.core.service.SystemParamsService;
-import com.cooking.core.service.UserNutritionService;
+import com.cooking.core.service.UserNutritionRelService;
 import com.cooking.core.service.UserService;
 import com.cooking.enums.SystemParamEnum;
 import com.cooking.exceptions.ApiException;
@@ -36,7 +37,7 @@ import java.util.Map;
 public class UserNutritionApi extends BaseController {
 
     @Autowired
-    private UserNutritionService userNutritionService;
+    private UserNutritionRelService userNutritionRelService;
     @Autowired
     private SystemParamsService systemParamsService;
     @Autowired
@@ -50,7 +51,7 @@ public class UserNutritionApi extends BaseController {
         queryParams.put("search", search);
         queryParams.put("userId", userId);
 
-        IPage<UserNutritionEntity> entityIPage = userNutritionService.findPage(new Page<>(pageNo, pageSize), queryParams);
+        IPage<UserNutritionRelEntity> entityIPage = userNutritionRelService.findPage(new Page<>(pageNo, pageSize), queryParams);
         return ok(entityIPage);
     }
 
@@ -58,28 +59,35 @@ public class UserNutritionApi extends BaseController {
     public BaseResponse save(@RequestBody JSONObject params) {
         Long id = params.getLong("id");
         Long userId = params.getLong("userId");
-        String name = params.getString("name");
+        Long nutritionId = params.getLong("nutritionId");
         String aimValue = params.getString("aimValue");
 
         UserEntity userEntity = validateUser(userId);
-        validateText(name, "营养元素名称");
         validateText(aimValue, "目标值");
 
-        UserNutritionEntity entity;
+        if(!BaseEntity.validId(nutritionId)){
+            throw new ApiException(BaseResponse.Code.fail.code, "营养目标不存在");
+        }
+
+        if(!BaseEntity.validId(nutritionId)){
+
+        }
+
+        UserNutritionRelEntity entity;
         if (id == null) {
             checkNutritionLimit(userId);
-            entity = new UserNutritionEntity();
+            entity = UserNutritionRelEntity.builder().build();
         } else {
-            entity = userNutritionService.getById(id);
+            entity = userNutritionRelService.getById(id);
             if (entity == null) {
                 throw new ApiException(BaseResponse.Code.fail.code, "营养目标不存在");
             }
         }
 
         entity.setUserId(userEntity.getId());
-        entity.setName(name.trim());
-        entity.setAimValue(aimValue.trim());
-        userNutritionService.saveOrUpdate(entity);
+        entity.setNutritionId(nutritionId);
+        entity.setValue(aimValue.trim());
+        userNutritionRelService.saveOrUpdate(entity);
 
         return ok(entity);
     }
@@ -90,11 +98,11 @@ public class UserNutritionApi extends BaseController {
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        UserNutritionEntity entity = userNutritionService.getById(id);
+        UserNutritionRelEntity entity = userNutritionRelService.getById(id);
         if (entity == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "营养目标不存在");
         }
-        userNutritionService.removeById(id);
+        userNutritionRelService.removeById(id);
         return ok();
     }
 
@@ -123,7 +131,7 @@ public class UserNutritionApi extends BaseController {
         } catch (Exception e) {
             limit = Integer.parseInt(SystemParamEnum.user_nutrition_limit.getDefaultValue());
         }
-        long count = userNutritionService.lambdaQuery().eq(UserNutritionEntity::getUserId, userId).count();
+        long count = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).count();
         if (count >= limit) {
             throw new ApiException(BaseResponse.Code.fail.code, "用户营养目标数量不能超过" + limit);
         }

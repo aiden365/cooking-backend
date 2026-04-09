@@ -13,7 +13,7 @@ import com.cooking.core.entity.*;
 import com.cooking.core.service.UserService;
 import com.cooking.core.service.UserDishCollectService;
 import com.cooking.core.service.UserLabelRelService;
-import com.cooking.core.service.UserNutritionService;
+import com.cooking.core.service.UserNutritionRelService;
 import com.cooking.core.service.UserShareService;
 import com.cooking.dto.UserEmailCodeDTO;
 import com.cooking.dto.UserRegisterDTO;
@@ -64,7 +64,7 @@ public class UserApi extends BaseController {
     @Autowired
     private UserLabelRelService userLabelRelService;
     @Autowired
-    private UserNutritionService userNutritionService;
+    private UserNutritionRelService userNutritionRelService;
 
     @PostMapping("list")
     public BaseResponse list(@RequestBody JSONObject params) {
@@ -207,7 +207,7 @@ public class UserApi extends BaseController {
         long collectCount = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getUserId, userId).count();
         long shareCount = userShareService.lambdaQuery().eq(UserShareEntity::getUserId, userId).count();
         long labelCount = userLabelRelService.lambdaQuery().eq(UserLabelRelEntity::getUserId, userId).count();
-        long nutritionCount = userNutritionService.lambdaQuery().eq(UserNutritionEntity::getUserId, userId).count();
+        long nutritionCount = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).count();
 
         JSONObject result = new JSONObject();
         result.put("collectCount", collectCount);

@@ -65,22 +65,23 @@ public class UserShareApi extends BaseController {
         IPage<UserShareEntity> entityIPage = userShareService.findPage(new Page<>(pageNo, pageSize), queryParams);
         Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityIPage.getRecords().stream().map(UserShareEntity::getUserId).collect(Collectors.toSet()));
         Map<Long, DishEntity> dishEntityMap = dishService.findMapByIds(entityIPage.getRecords().stream().map(UserShareEntity::getDishId).collect(Collectors.toSet()));
-        entityIPage.getRecords().forEach(e -> {
-            UserEntity userEntity = userEntityMap.get(e.getUserId());
-            DishEntity dishEntity = dishEntityMap.get(e.getDishId());
-            e.setUserName(userEntity == null ? "" : userEntity.getUserName());
-            e.setDishName(dishEntity == null ? "" : dishEntity.getName());
-        });
+        for (UserShareEntity record : entityIPage.getRecords()) {
+            UserEntity userEntity = userEntityMap.get(record.getUserId());
+            DishEntity dishEntity = dishEntityMap.get(record.getDishId());
+            record.setUserName(userEntity == null ? "" : userEntity.getUserName());
+            record.setDishName(dishEntity == null ? "" : dishEntity.getName());
+        }
 
         return ok(entityIPage);
     }
 
-    @PostMapping(value = "add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "add")
     @Transactional(rollbackFor = Exception.class)
-    public BaseResponse add(@RequestParam(value = "userId", required = false) Long userId,
-                            @RequestParam(value = "dishId", required = false) Long dishId,
-                            @RequestParam(value = "description", required = false) String description,
-                            @RequestPart(value = "dishImg", required = false) MultipartFile dishImg) {
+    public BaseResponse add(@RequestBody JSONObject params) {
+        Long userId = params.getLong("userId");
+        Long dishId = params.getLong("dishId");
+        String description = params.getString("description");
+        String dishImg = params.getString("dishImg");
 
         UserEntity userEntity = validateUser(userId);
         DishEntity dishEntity = validateDish(dishId);
@@ -89,12 +90,11 @@ public class UserShareApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "菜品图片不能为空");
         }
 
-        String relativePath = saveShareImage(userId, dishId, dishImg);
 
         UserShareEntity userShareEntity = new UserShareEntity();
         userShareEntity.setUserId(userEntity.getId());
         userShareEntity.setDishId(dishEntity.getId());
-        userShareEntity.setDishImg(relativePath);
+        userShareEntity.setDishImg(dishImg);
         userShareEntity.setDescription(description.trim());
         userShareService.save(userShareEntity);
 
@@ -161,31 +161,7 @@ public class UserShareApi extends BaseController {
         }
     }
 
-    private String saveShareImage(Long userId, Long dishId, MultipartFile file) {
-        String basePath = PathEnum.user_share_path.getValue().replaceFirst("^[/\\\\]+", "");
-        Path shareDir = Paths.get(uploadPath, basePath, String.valueOf(userId), String.valueOf(dishId));
-        try {
-            Files.createDirectories(shareDir);
-        } catch (IOException e) {
-            throw new ApiException(BaseResponse.Code.fail.code, "创建分享图片目录失败");
-        }
 
-        String ext = "";
-        String originFileName = file.getOriginalFilename();
-        if (StringUtils.hasText(originFileName) && originFileName.lastIndexOf('.') >= 0) {
-            ext = originFileName.substring(originFileName.lastIndexOf('.'));
-        }
-
-        String fileName = UUID.randomUUID() + ext;
-        Path target = shareDir.resolve(fileName);
-        try {
-            file.transferTo(target);
-        } catch (IOException e) {
-            throw new ApiException(BaseResponse.Code.fail.code, "保存分享图片失败");
-        }
-
-        return PathEnum.user_share_path.getValue() + "/" + userId + "/" + dishId + "/" + fileName;
-    }
 
     private void deleteShareImage(String relativePath) {
         if (!StringUtils.hasText(relativePath)) {

@@ -3,6 +3,7 @@ package com.cooking.core.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.cooking.base.BaseEntity;
+import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldNameConstants;
@@ -20,8 +21,8 @@ import lombok.experimental.FieldNameConstants;
 @Builder
 @FieldNameConstants
 @Accessors(chain = true)
-@TableName("tbl_user_nutrition")
-public class UserNutritionEntity extends BaseEntity {
+@TableName("tbl_user_nutrition_rel")
+public class UserNutritionRelEntity extends BaseEntity {
 
     /**
      * 用户ID
@@ -30,14 +31,14 @@ public class UserNutritionEntity extends BaseEntity {
     private Long userId;
 
     /**
-     * 营养名称
+     * 营养id
      */
-    @TableField("name")
-    private String name;
+    @TableField("nutrition_id")
+    private Long nutritionId;
 
     /**
-     * 目标值
+     * 期望值
      */
-    @TableField("aim_value")
-    private String aimValue;
+    @TableField("value")
+    private String value;
 }
