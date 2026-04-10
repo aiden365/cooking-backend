@@ -8,8 +8,11 @@
             and user_id = #{params.userId}
         </if>
 
-        <if test="params.search != null and params.search != ''">
-            and exists(select 1 from tbl_dish where tbl_dish.id = tbl_user_share.dish_id and tbl_dish.name like concat('%',#{params.search},'%'))
+        <if test="params.dishName != null and params.dishName != ''">
+            and exists(select 1 from tbl_dish where tbl_dish.id = tbl_user_share.dish_id and tbl_dish.name like concat('%',#{params.dishName},'%'))
+        </if>
+        <if test="params.userName != null and params.userName != ''">
+            and exists(select 1 from tbl_user where tbl_user.id = tbl_user_share.user_id and tbl_user.user_name like concat('%',#{params.userName},'%'))
         </if>
         order by create_time desc
     </select>

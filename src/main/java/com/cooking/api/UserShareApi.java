@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  * @since 2026-03-04
  */
 @RestController
-@RequestMapping("/share/")
+@RequestMapping("share")
 public class UserShareApi extends BaseController {
 
     private static final int DESCRIPTION_MAX_LENGTH = 500;
@@ -58,12 +58,7 @@ public class UserShareApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        String search = params.getString("search");
-        Long userId = params.getLong("userId");
-        Map<String, Object> queryParams = new HashMap<>();
-        queryParams.put("search", search);
-        queryParams.put("userId", userId);
-        IPage<UserShareEntity> entityIPage = userShareService.findPage(new Page<>(pageNo, pageSize), queryParams);
+        IPage<UserShareEntity> entityIPage = userShareService.findPage(new Page<>(pageNo, pageSize), params);
         Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityIPage.getRecords().stream().map(UserShareEntity::getUserId).collect(Collectors.toSet()));
         Map<Long, DishEntity> dishEntityMap = dishService.findMapByIds(entityIPage.getRecords().stream().map(UserShareEntity::getDishId).collect(Collectors.toSet()));
         for (UserShareEntity record : entityIPage.getRecords()) {
