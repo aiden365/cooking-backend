@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.DishEntity;
+import com.cooking.core.entity.UserDietRecordEntity;
 import com.cooking.core.entity.UserEntity;
 import com.cooking.core.entity.UserShareEntity;
 import com.cooking.core.service.DishService;
@@ -43,7 +44,7 @@ import java.util.stream.Collectors;
  * @since 2026-03-04
  */
 @RestController
-@RequestMapping("/userShare")
+@RequestMapping("/share/")
 public class UserShareApi extends BaseController {
 
     private static final int DESCRIPTION_MAX_LENGTH = 500;
@@ -108,27 +109,43 @@ public class UserShareApi extends BaseController {
     @PostMapping("delete")
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse delete(@RequestBody JSONObject params) {
-        Long id = params.getLong("id");
-        if (id == null) {
+        Long shareId = params.getLong("shareId");
+        if (shareId == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
 
-        UserShareEntity userShareEntity = userShareService.getById(id);
+        UserShareEntity userShareEntity = userShareService.getById(shareId);
         if (userShareEntity == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "分享记录不存在");
         }
 
         DishEntity dishEntity = validateDish(userShareEntity.getDishId());
 
-        userShareService.removeById(id);
+        userShareService.removeById(shareId);
         deleteShareImage(userShareEntity.getDishImg());
 
         int activeVal = dishEntity.getActiveVal() == null ? 0 : dishEntity.getActiveVal();
-        dishEntity.setActiveVal(Math.max(0, activeVal - 1));
+        dishEntity.setPopularVal(Math.max(0, activeVal - 1));
         dishService.updateById(dishEntity);
 
         return ok();
     }
+
+
+    @PostMapping("detail")
+    public BaseResponse detail(@RequestBody JSONObject params) {
+        Long shareId = params.getLong("shareId");
+        if (shareId == null) {
+            return fail("id不能为空");
+        }
+        UserShareEntity entity = userShareService.getById(shareId);
+        if (entity == null) {
+            return fail("分享记录不存在");
+        }
+        return ok(entity);
+    }
+
+
 
     private UserEntity validateUser(Long userId) {
         if (userId == null) {

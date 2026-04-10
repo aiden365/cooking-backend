@@ -32,12 +32,16 @@ public class InitialConfig implements ApplicationRunner {
             userEntity.setUserName("超级管理员");
             userEntity.setUserPass(MD5.create().digestHex("admin"));
             userEntity.setStatus(1);
+            userEntity.setGender(1);
+            userEntity.setAge(18);
+            userEntity.setStature(175);
+            userEntity.setWeight(60);
             userEntity.setCreateUser(UserEntity.super_admin_id);
             userEntity.setUpdateUser(UserEntity.super_admin_id);
             userEntity.setDeleted(0);
             userEntity.setCreateTime(new Date());
             userEntity.setUpdateTime(new Date());
-            userEntity.setType(3);
+            userEntity.setType(2);
             userService.save(userEntity);
         }
 

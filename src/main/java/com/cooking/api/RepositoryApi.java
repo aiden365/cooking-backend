@@ -74,6 +74,20 @@ public class RepositoryApi extends BaseController {
         return ok(entityIPage);
     }
 
+    @PostMapping("detail")
+    public BaseResponse detail(@RequestBody JSONObject params) {
+        Long id = params.getLong("id");
+        if (!UserEntity.validId(id)) {
+            return fail("id不能为空");
+        }
+        RepositoryEntity repositoryEntity = repositoryService.lambdaQuery().eq(RepositoryEntity::getId, id).list().stream().findAny().orElse(null);
+        if (repositoryEntity == null) {
+            return fail("用户不存在");
+        }
+
+        return ok(repositoryEntity);
+    }
+
     @PostMapping("save")
     public BaseResponse save(@RequestBody RepositoryEntity repositoryEntity) {
         if (!StringUtils.hasText(repositoryEntity.getName())) {

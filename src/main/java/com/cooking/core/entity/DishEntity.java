@@ -89,7 +89,7 @@ public class DishEntity extends BaseEntity {
     private Integer activeVal;
 
     /**
-     * 菜谱人气值, 菜谱收到收藏会增加
+     * 菜谱人气值, 菜谱收到分享会增加
      */
     @TableField("popular_val")
     private Integer popularVal;

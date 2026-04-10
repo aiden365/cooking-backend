@@ -64,10 +64,10 @@ public class UserNutritionApi extends BaseController {
         Long id = params.getLong("id");
         Long userId = params.getLong("userId");
         Long nutritionId = params.getLong("nutritionId");
-        String aimValue = params.getString("aimValue");
+        String value = params.getString("value");
 
         UserEntity userEntity = validateUser(userId);
-        validateText(aimValue, "营养目标值");
+        validateText(value, "营养目标值");
 
         if(!BaseEntity.validId(nutritionId)){
             throw new ApiException(BaseResponse.Code.fail.code, "营养元素不存在");
@@ -87,10 +87,15 @@ public class UserNutritionApi extends BaseController {
                 throw new ApiException(BaseResponse.Code.fail.code, "营养目标不存在");
             }
         }
+        // 不能添加重重复的营养
+        UserNutritionRelEntity existRel = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).eq(UserNutritionRelEntity::getNutritionId, nutritionId).one();
+        if (existRel != null && !existRel.getId().equals(id)) {
+            throw new ApiException(BaseResponse.Code.fail.code, "用户已添加该营养目标");
+        }
 
         entity.setUserId(userEntity.getId());
         entity.setNutritionId(nutritionId);
-        entity.setValue(aimValue.trim());
+        entity.setValue(value.trim());
         userNutritionRelService.saveOrUpdate(entity);
 
         return ok(entity);

@@ -4,6 +4,9 @@
 
     <select id="findPage" resultType="com.cooking.core.entity.UserEntity">
         select * from tbl_user where 1=1
+        <if test="params.search != null">
+            and user_name like concat('%',#{params.search},'%')
+        </if>
         order by create_time desc
     </select>
 </mapper>

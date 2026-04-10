@@ -61,6 +61,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 用户统计信息接口开发 (已完成)
     - [x] 保存用户标签接口开发 (已完成)
     - [x] 生成用户个性化菜谱接口开发 (已完成)
+    - [ ] 删除用户接口开发 (当前进行)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -71,7 +72,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 保存菜品标签接口开发 (已完成)
     - [x] 保存菜品信息接口开发 (已完成)
     - [x] 获取菜品标签接口开发 (已完成)
-    - [ ] 删除菜谱接口开发 (已完成)
+    - [x] 删除菜谱接口开发 (已完成)
 - [x] **阶段 3: 标签模块 (Lable Module)**
     - [x] 标签模块接口开发 (已完成)
 - [x] **阶段 4: 知识库模块 (Lable Module)**
@@ -82,7 +83,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
   - [x] 完成系统首页的菜谱审核统计接口开发 (已完成)
   - [x] 完成系统首页的菜谱动态统计接口开发 (已完成)
 - [x] **阶段 6: 系统管理 (Lable Module)**
-  - [ ] 完成系统营养相关接口开发 (当前进行)
+  - [x] 完成系统营养相关接口开发 (已完成)
 - [x] **阶段 7: AI 对接模块 (AI Chat Module)**
     - [x] 集成 Spring AI 与 Qwen (已完成)
     - [x] 菜谱智能生成接口开发 (已完成)
@@ -90,10 +91,9 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`完成系统营养相关接口开发`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/NutritionApi.java中实现。 分别创建营养分页查询接口、保存接口，删除接口
-> 2：分页查询接口 接口接收 {pageNum， pageSize， search} 。接口返回营养实体类的分页信息，NutritionEntity 
-> 3：保存接口，以营养实体类NutritionEntity接收参数，并安装是否存在id进行保存或修改
-> 4：删除接口，以id数组{"ids":[1,2,3,4,5]}为接收参数，并删除对应id的记录
-> 
-
+> 现在，让我们开始`删除用户接口开发`吧，请按照以下要求完成该任务：
+> 0：请先查阅 cookbook.sql 文件，了解与用户相关的数据表结构，及其相关的实体类。
+> 1：在src/main/java/com/cooking/api/User.java中实现。 创建删除用户接口 delete。
+> 2：接口接收 用户id 列表为参数，{"ids":[1,2,3,4]}
+> 3：在删除用户时，同时删除与用户相关的数据，包括不限于tbl_user_diet_record、tbl_user_dish_collect、tbl_user_individual_dish
+> 4：注意事物的使用，确保删除操作一致性。

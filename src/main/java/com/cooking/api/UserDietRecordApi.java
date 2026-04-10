@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
  * @since 2026-03-04
  */
 @RestController
-@RequestMapping("/userDietRecord")
+@RequestMapping("diet")
 public class UserDietRecordApi extends BaseController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -95,17 +95,19 @@ public class UserDietRecordApi extends BaseController {
 
     @PostMapping("delete")
     public BaseResponse delete(@RequestBody JSONObject params) {
-        Long id = params.getLong("id");
-        if (id == null) {
+        Long dietId = params.getLong("dietId");
+        if (dietId == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        UserDietRecordEntity entity = userDietRecordService.getById(id);
+        UserDietRecordEntity entity = userDietRecordService.getById(dietId);
         if (entity == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "饮食记录不存在");
         }
-        userDietRecordService.removeById(id);
+        userDietRecordService.removeById(dietId);
         return ok();
     }
+
+
 
     private void validateParams(Long userId, Long dishId, String dietDate, Integer dietOrder) {
         if (userId == null) {

@@ -14,9 +14,10 @@ import java.io.Serializable;
 public class BaseResponse implements Serializable {
 
     private int code = Code.success.code;;
-    private String msg = Code.success.msg;;
+    private String message = Code.success.msg;;
     private Object data;
     private String authCode = "";
+    private boolean success = true;
 
     public BaseResponse() {
     }
@@ -30,13 +31,15 @@ public class BaseResponse implements Serializable {
     }
     public BaseResponse fail(){
         this.code = Code.fail.code;
-        this.msg = Code.fail.msg;
+        this.message = Code.fail.msg;
+        this.success = false;
         return this;
     }
 
     public BaseResponse fail(String massage){
         this.code = Code.fail.code;
-        this.msg = massage;
+        this.message = massage;
+        this.success = false;
         return this;
     }
 
@@ -47,22 +50,25 @@ public class BaseResponse implements Serializable {
 
     public BaseResponse(Throwable e) {
         super();
-        this.msg = e.getMessage();
+        this.message = e.getMessage();
         this.code = Code.fail.code;
+        this.success = false;
     }
 
-    public BaseResponse(int code, String msg, Object data) {
+    public BaseResponse(int code, String message, Object data) {
         super();
         this.code = code;
-        this.msg = msg;
+        this.message = message;
         this.data = data;
+        this.success = code == Code.success.code;
     }
 
-    public BaseResponse(int code, String msg, Object data, String authCode) {
+    public BaseResponse(int code, String message, Object data, String authCode) {
         this.code = code;
-        this.msg = msg;
+        this.message = message;
         this.data = data;
         this.authCode = authCode;
+        this.success = code == Code.success.code;
     }
 
 
@@ -75,12 +81,12 @@ public class BaseResponse implements Serializable {
         return this;
     }
 
-    public String getMsg() {
-        return msg;
+    public String getMessage() {
+        return message;
     }
 
-    public BaseResponse setMsg(String msg) {
-        this.msg = msg;
+    public BaseResponse setMessage(String message) {
+        this.message = message;
         return this;
     }
 

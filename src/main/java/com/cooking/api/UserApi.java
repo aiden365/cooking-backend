@@ -16,6 +16,7 @@ import com.cooking.dto.UserRegisterDTO;
 import com.cooking.utils.EmailUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,6 +64,14 @@ public class UserApi extends BaseController {
     private UserNutritionRelService userNutritionRelService;
     @Autowired
     private UserIndividualDishService userIndividualDishService;
+    @Autowired
+    private UserDietRecordService userDietRecordService;
+    @Autowired
+    private UserShareCommentService userShareCommentService;
+    @Autowired
+    private DishAppraisesService dishAppraisesService;
+    @Autowired
+    private DishCommentService dishCommentService;
 
     @PostMapping("list")
     public BaseResponse list(@RequestBody JSONObject params) {
@@ -75,16 +84,7 @@ public class UserApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        // 分页页号
-        int pageNo = params.getIntValue("pageNo");
-        // 一页显示多少数据
-        int pageSize = params.getIntValue("pageSize");
-        IPage<UserEntity> page = new Page<>(pageNo, pageSize);
-
-        String search = params.getString("search");
-        Map<String, Object> queryParams = new HashMap<>();
-        queryParams.put("search", search);
-        IPage<UserEntity> entityIPage = userService.findPage(page, params);
+        IPage<UserEntity> entityIPage = userService.findPage(new Page<>(pageNo, pageSize), params);
         return ok(entityIPage);
     }
 
@@ -182,12 +182,73 @@ public class UserApi extends BaseController {
         return ok("验证码已发送");
     }
 
-    @PostMapping("edit")
-    public BaseResponse edit(@RequestBody UserEntity userEntity) {
-        UserEntity existUserEntity = userService.lambdaQuery().eq(UserEntity::getId, userEntity.getId()).list().stream()
-                .findAny().orElse(null);
-        if (existUserEntity == null) {
+    @PostMapping("detail")
+    public BaseResponse detail(@RequestBody JSONObject params) {
+        Long id = params.getLong("id");
+        if (!UserEntity.validId(id)) {
+            return fail("id不能为空");
+        }
+        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getId, id).list().stream().findAny().orElse(null);
+        if (userEntity == null) {
             return fail("用户不存在");
+        }
+        return ok(userEntity);
+    }
+
+    @PostMapping("update-status")
+    public BaseResponse updateStatus(@RequestBody JSONObject params) {
+        Long userId = params.getLong("userId");
+        Integer status = params.getInteger("status");
+        if (!UserEntity.validId(userId)) {
+            return fail("id不能为空");
+        }
+        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getId, userId).list().stream().findAny().orElse(null);
+        if (userEntity == null) {
+            return fail("用户不存在");
+        }
+        if(status == null){
+            return fail("状态不能为空");
+        }
+
+        userEntity.setStatus(status);
+        userService.saveOrUpdate(userEntity);
+        return ok(userEntity);
+    }
+
+    @PostMapping("reset-password")
+    public BaseResponse resetPassword(@RequestBody JSONObject params) {
+        Long userId = params.getLong("userId");
+        String password = params.getString("password");
+        if (!UserEntity.validId(userId)) {
+            return fail("id不能为空");
+        }
+        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getId, userId).list().stream().findAny().orElse(null);
+        if (userEntity == null) {
+            return fail("用户不存在");
+        }
+        if(StrUtil.isBlank( password)){
+            return fail("密码不能为空");
+        }
+
+        userEntity.setUserPass(MD5.create().digestHex(password));
+        userService.saveOrUpdate(userEntity);
+        return ok(userEntity);
+    }
+
+
+
+    @PostMapping("save")
+    public BaseResponse save(@RequestBody UserEntity userEntity) {
+        //根据用户id是否存在 决定是新增用户还是修改用户。
+        if (userEntity.getId() == null) {
+            userEntity.setUserPass(MD5.create().digestHex(userEntity.getUserPass()));
+            userEntity.setType(1);
+            userEntity.setStatus(1);
+        }else{
+            UserEntity exist = userService.getById(userEntity.getId());
+            if (exist == null) {
+                return fail("用户不存在");
+            }
         }
 
         userService.saveOrUpdate(userEntity);
@@ -249,5 +310,33 @@ public class UserApi extends BaseController {
         userLabelRelService.saveUserLabels(userId, labelIds);
 
         return ok("用户标签保存成功");
+    }
+
+    @PostMapping("delete")
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse delete(@RequestBody JSONObject params) {
+        List<Long> ids = params.getList("ids", Long.class);
+        if (ids == null || ids.isEmpty()) {
+            return fail("ids不能为空");
+        }
+
+        List<UserShareEntity> shareList = userShareService.lambdaQuery().in(UserShareEntity::getUserId, ids).list();
+        List<Long> shareIds = shareList.stream().map(UserShareEntity::getId).toList();
+
+        if (!shareIds.isEmpty()) {
+            userShareCommentService.lambdaUpdate().in(UserShareCommentEntity::getUserShareId, shareIds).remove();
+        }
+
+        userShareCommentService.lambdaUpdate().in(UserShareCommentEntity::getUserId, ids).remove();
+        userShareService.lambdaUpdate().in(UserShareEntity::getUserId, ids).remove();
+        userDishCollectService.lambdaUpdate().in(UserDishCollectEntity::getUserId, ids).remove();
+        userDietRecordService.lambdaUpdate().in(UserDietRecordEntity::getUserId, ids).remove();
+        userIndividualDishService.lambdaUpdate().in(UserIndividualDishEntity::getUserId, ids).remove();
+        userLabelRelService.lambdaUpdate().in(UserLabelRelEntity::getUserId, ids).remove();
+        userNutritionRelService.lambdaUpdate().in(UserNutritionRelEntity::getUserId, ids).remove();
+        dishAppraisesService.lambdaUpdate().in(DishAppraisesEntity::getUserId, ids).remove();
+        dishCommentService.lambdaUpdate().in(DishCommentEntity::getUserId, ids).remove();
+        userService.removeByIds(ids);
+        return ok();
     }
 }
