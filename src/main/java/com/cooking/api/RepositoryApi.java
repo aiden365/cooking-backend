@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  * </p>
  *
  * @author aiden
- * @since 2026-03-04
+ * @since 2026-02-03
  */
 @RestController
 @RequestMapping("repository")
@@ -59,14 +59,7 @@ public class RepositoryApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        int pageNo = params.getIntValue("pageNo");
-        int pageSize = params.getIntValue("pageSize");
-        IPage<RepositoryEntity> page = new Page<>(pageNo, pageSize);
-
-        String search = params.getString("search");
-        Map<String, Object> queryParams = new HashMap<>();
-        queryParams.put("search", search);
-        IPage<RepositoryEntity> entityIPage = repositoryService.findPage(page, queryParams);
+        IPage<RepositoryEntity> entityIPage = repositoryService.findPage(new Page<>(pageNo, pageSize), params);
         Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityIPage.getRecords().stream().map(BaseEntity::getCreateUser).collect(Collectors.toSet()));
         for (RepositoryEntity record : entityIPage.getRecords()) {
             record.setCreatorName(Optional.ofNullable(userEntityMap.get(record.getCreateUser())).map(UserEntity::getUserName).orElse(""));

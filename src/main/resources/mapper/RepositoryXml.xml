@@ -4,6 +4,12 @@
 
     <select id="findPage" resultType="com.cooking.core.entity.RepositoryEntity">
         select * from tbl_repository where 1=1
+        <if test="params.search != null and params.search != ''">
+            and (name like concat('%',#{params.search},'%') or content like concat('%',#{params.search},'%') or description like concat('%',#{params.search},'%'))
+        </if>
+        <if test="params.type != null and params.search != ''">
+            and type = #{params.type}
+        </if>
         order by create_time desc
     </select>
 </mapper>

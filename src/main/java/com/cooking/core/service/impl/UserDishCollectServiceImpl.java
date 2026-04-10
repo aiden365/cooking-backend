@@ -19,7 +19,7 @@ import java.util.Set;
  * </p>
  *
  * @author aiden
- * @since 2026-03-04
+ * @since 2026-02-03
  */
 @Service
 public class UserDishCollectServiceImpl extends BaseServiceImpl<UserDishCollectMapper, UserDishCollectEntity> implements UserDishCollectService {
