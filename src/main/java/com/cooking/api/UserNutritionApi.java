@@ -128,12 +128,12 @@ public class UserNutritionApi extends BaseController {
     }
 
     private void checkNutritionLimit(Long userId) {
-        SystemParamsEntity limitParam = systemParamsService.findByName(SystemParamEnum.user_nutrition_limit);
+        SystemParamsEntity limitParam = systemParamsService.findByName(SystemParamEnum.maxNutritionTargets);
         int limit;
         try {
             limit = Integer.parseInt(limitParam.getParamValue());
         } catch (Exception e) {
-            limit = Integer.parseInt(SystemParamEnum.user_nutrition_limit.getDefaultValue());
+            limit = Integer.parseInt(SystemParamEnum.maxNutritionTargets.getValue());
         }
         long count = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).count();
         if (count >= limit) {

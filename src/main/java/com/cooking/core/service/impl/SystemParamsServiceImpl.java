@@ -45,11 +45,11 @@ public class SystemParamsServiceImpl extends BaseServiceImpl<SystemParamsMapper,
 
     @Override
     public SystemParamsEntity findByName(SystemParamEnum paramEnum) {
-        SystemParamsEntity systemParamsEntity = super.lambdaQuery().eq(SystemParamsEntity::getParamName, paramEnum.defaultValue).list().stream().findAny().orElse(null);
+        SystemParamsEntity systemParamsEntity = super.lambdaQuery().eq(SystemParamsEntity::getParamName, paramEnum.value).list().stream().findAny().orElse(null);
         if(systemParamsEntity == null){
             systemParamsEntity = new SystemParamsEntity();
             systemParamsEntity.setParamName(paramEnum.name());
-            systemParamsEntity.setParamValue(paramEnum.getDefaultValue());
+            systemParamsEntity.setParamValue(paramEnum.getValue());
         }
         return systemParamsEntity;
     }

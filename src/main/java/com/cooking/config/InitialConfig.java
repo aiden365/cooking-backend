@@ -1,21 +1,25 @@
 package com.cooking.config;
 
 import cn.hutool.crypto.digest.MD5;
+import com.cooking.core.entity.SystemParamsEntity;
 import com.cooking.core.entity.UserEntity;
+import com.cooking.core.service.SystemParamsService;
 import com.cooking.core.service.UserService;
+import com.cooking.enums.SystemParamEnum;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
-import java.util.Optional;
+import java.util.*;
 
 @Component
 public class InitialConfig implements ApplicationRunner {
 
     @Autowired
     private UserService userService;
+    @Autowired
+    private SystemParamsService systemParamsService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -36,5 +40,23 @@ public class InitialConfig implements ApplicationRunner {
             userEntity.setType(3);
             userService.save(userEntity);
         }
+
+        //初始化系统参数
+        List<SystemParamEnum> systemParamEnums = Arrays.stream(SystemParamEnum.values()).toList();
+        List<SystemParamsEntity> paramsEntityList = systemParamsService.list();
+        List<SystemParamsEntity> newParamsEntityList = new ArrayList<>();
+        for (SystemParamEnum paramEnum : systemParamEnums) {
+            SystemParamsEntity paramsEntity = paramsEntityList.stream().filter(paramsEntity1 -> paramsEntity1.getParamName().equals(paramEnum.name())).findFirst().orElse(null);
+            if(paramsEntity == null){
+                paramsEntity = new SystemParamsEntity();
+                paramsEntity.setParamName(paramEnum.name());
+                paramsEntity.setParamValue(paramEnum.getValue());
+                newParamsEntityList.add(paramsEntity);
+            }
+        }
+        if(!newParamsEntityList.isEmpty()){
+            systemParamsService.saveOrUpdateBatch(newParamsEntityList);
+        }
+
     }
 }
