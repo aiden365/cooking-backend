@@ -107,10 +107,7 @@ public class UserNutritionApi extends BaseController {
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        UserNutritionRelEntity entity = userNutritionRelService.getById(id);
-        if (entity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "营养目标不存在");
-        }
+
         userNutritionRelService.removeById(id);
         return ok();
     }

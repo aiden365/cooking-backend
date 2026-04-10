@@ -7,6 +7,20 @@
         <if test="params.userId != null">
             and user_id = #{params.userId}
         </if>
-        order by create_time desc
+        <if test="params.dietOrder != null and params.dietOrder != ''">
+            and diet_order = #{params.dietOrder}
+        </if>
+
+        <if test="params.dietDate != null and params.dietDate != ''">
+            and date_format(diet_date, '%Y-%m-%d') = #{params.dietDate}
+        </if>
+
+        <if test="params.dishName != null and params.dishName != ''">
+            and exists(select 1 from tbl_dish where tbl_dish.id = tbl_user_diet_record.dish_id and tbl_dish.name like concat('%',#{params.dishName},'%'))
+        </if>
+        <if test="params.userName != null and params.userName != ''">
+            and exists(select 1 from tbl_user where tbl_user.id = tbl_user_diet_record.user_id and tbl_user.user_name like concat('%',#{params.userName},'%'))
+        </if>
+        order by diet_date desc,user_id asc, diet_order asc
     </select>
 </mapper>

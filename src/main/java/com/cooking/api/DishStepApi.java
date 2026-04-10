@@ -101,10 +101,7 @@ public class DishStepApi extends BaseController {
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        DishStepEntity dishStepEntity = dishStepService.getById(id);
-        if (dishStepEntity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "步骤不存在");
-        }
+
         dishStepService.removeById(id);
 
         return ok();

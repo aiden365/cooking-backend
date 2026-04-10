@@ -50,12 +50,7 @@ public class UserDietRecordApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        String search = params.getString("search");
-        Long userId = params.getLong("userId");
-        Map<String, Object> queryParams = new HashMap<>();
-        queryParams.put("search", search);
-        queryParams.put("userId", userId);
-        IPage<UserDietRecordEntity> entityIPage = userDietRecordService.findPage(new Page<>(pageNo, pageSize), queryParams);
+        IPage<UserDietRecordEntity> entityIPage = userDietRecordService.findPage(new Page<>(pageNo, pageSize), params);
         Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityIPage.getRecords().stream().map(UserDietRecordEntity::getUserId).collect(Collectors.toSet()));
         Map<Long, DishEntity> dishEntityMap = dishService.findMapByIds(entityIPage.getRecords().stream().map(UserDietRecordEntity::getDishId).collect(Collectors.toSet()));
         entityIPage.getRecords().forEach(e -> {
@@ -98,10 +93,6 @@ public class UserDietRecordApi extends BaseController {
         Long dietId = params.getLong("dietId");
         if (dietId == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
-        }
-        UserDietRecordEntity entity = userDietRecordService.getById(dietId);
-        if (entity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "饮食记录不存在");
         }
         userDietRecordService.removeById(dietId);
         return ok();

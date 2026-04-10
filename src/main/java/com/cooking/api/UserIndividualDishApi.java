@@ -156,10 +156,7 @@ public class UserIndividualDishApi extends BaseController {
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        UserIndividualDishEntity entity = userIndividualDishService.getById(id);
-        if (entity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "个性化菜谱不存在");
-        }
+
         userIndividualDishService.removeById(id);
         return ok();
     }

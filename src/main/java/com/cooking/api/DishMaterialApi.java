@@ -102,10 +102,7 @@ public class DishMaterialApi extends BaseController {
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        DishMaterialEntity dishMaterialEntity = dishMaterialService.getById(id);
-        if (dishMaterialEntity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "食材不存在");
-        }
+
         dishMaterialService.removeById(id);
         return ok();
     }

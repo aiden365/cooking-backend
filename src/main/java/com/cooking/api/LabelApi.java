@@ -97,10 +97,7 @@ public class LabelApi extends BaseController {
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        LabelEntity labelEntity = labelService.getById(id);
-        if (labelEntity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "标签不存在");
-        }
+
 
         userLabelRelService.remove(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getLabelId, id));
         dishLableRelService.remove(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getLabelId, id));

@@ -234,7 +234,7 @@ CREATE TABLE `tbl_user_diet_record`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` bigint(20) NOT NULL COMMENT '用户ID',
   `dish_id` bigint(20) NOT NULL COMMENT '菜品ID',
-  `diet_date` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '日期',
+  `diet_date` date NOT NULL COMMENT '日期',
   `diet_order` int(11) NOT NULL COMMENT '餐次：1=早餐，2=午餐，3=晚餐',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `create_user` bigint(20) NOT NULL COMMENT '创建人',

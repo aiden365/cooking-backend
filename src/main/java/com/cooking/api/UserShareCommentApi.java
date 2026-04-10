@@ -108,10 +108,7 @@ public class UserShareCommentApi extends BaseController {
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
-        UserShareCommentEntity commentEntity = userShareCommentService.getById(id);
-        if (commentEntity == null) {
-            throw new ApiException(BaseResponse.Code.fail.code, "评论不存在");
-        }
+
         userShareCommentService.removeById(id);
         return ok();
     }
