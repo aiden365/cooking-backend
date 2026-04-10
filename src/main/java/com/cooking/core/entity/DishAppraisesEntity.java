@@ -60,4 +60,17 @@ public class DishAppraisesEntity extends BaseEntity {
      */
     @TableField("satisfaction_score")
     private Integer satisfactionScore;
+
+    /**
+     * 菜名
+     */
+    @TableField(exist = false)
+    private String dishName;
+
+    /**
+     * 用户姓名
+     */
+    @TableField(exist = false)
+    private String userName;
+
 }

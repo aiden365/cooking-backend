@@ -6,11 +6,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
-import com.cooking.core.entity.DishAppraisesEntity;
-import com.cooking.core.entity.DishEntity;
-import com.cooking.core.entity.UserEntity;
+import com.cooking.core.entity.*;
 import com.cooking.core.service.DishAppraisesService;
 import com.cooking.core.service.DishService;
+import com.cooking.core.service.UserService;
+import com.cooking.dto.DishScoreDTO;
 import com.cooking.exceptions.ApiException;
 import com.cooking.utils.SystemContextHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +26,7 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -36,32 +37,41 @@ import java.util.Map;
  * @since 2026-02-03
  */
 @RestController
-@RequestMapping("dishAppraises")
+@RequestMapping("appraises")
 public class DishAppraisesApi extends BaseController {
 
     @Autowired
     private DishAppraisesService dishAppraisesService;
     @Autowired
     private DishService dishService;
+    @Autowired
+    private UserService userService;
+
+    @PostMapping("dishScorePage")
+    public BaseResponse dishScorePage(@RequestBody JSONObject params) {
+        String search = params.getString("search");
+        Map<String, Object> queryParams = new HashMap<>();
+        queryParams.put("search", search);
+        IPage<DishScoreDTO> page = dishAppraisesService.findDishScorePage(new Page<>(pageNo, pageSize), queryParams);
+        return ok(page);
+    }
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        int pageNo = params.getIntValue("pageNo");
-        int pageSize = params.getIntValue("pageSize");
+        IPage<DishAppraisesEntity> entityIPage = dishAppraisesService.findPage(new Page<>(pageNo, pageSize), params);
 
-        String search = params.getString("search");
-        Long dishId = params.getLong("dishId");
-        Long userId = params.getLong("userId");
 
-        IPage<DishAppraisesEntity> page = new Page<>(pageNo, pageSize);
-
-        Map<String, Object> queryParams = new HashMap<>();
-        queryParams.put("search", search);
-        queryParams.put("dishId", dishId);
-        queryParams.put("userId", userId);
-        IPage<DishAppraisesEntity> entityIPage = dishAppraisesService.findPage(page, params);
+        Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityIPage.getRecords().stream().map(DishAppraisesEntity::getUserId).collect(Collectors.toSet()));
+        Map<Long, DishEntity> dishEntityMap = dishService.findMapByIds(entityIPage.getRecords().stream().map(DishAppraisesEntity::getDishId).collect(Collectors.toSet()));
+        for (DishAppraisesEntity record : entityIPage.getRecords()) {
+            UserEntity userEntity = userEntityMap.get(record.getUserId());
+            DishEntity dishEntity = dishEntityMap.get(record.getDishId());
+            record.setUserName(userEntity == null ? "" : userEntity.getUserName());
+            record.setDishName(dishEntity == null ? "" : dishEntity.getName());
+        }
         return ok(entityIPage);
     }
+
 
     @PostMapping("scoring")
     @Transactional(rollbackFor = Exception.class)
@@ -125,6 +135,17 @@ public class DishAppraisesApi extends BaseController {
         result.put("satisfactionAvg", satisfactionAvg);
         result.put("totalScore", totalScore);
         return ok(result);
+    }
+
+    @PostMapping("delete")
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse delete(@RequestBody JSONObject params) {
+        Long id = params.getLong("id");
+        if (id == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
+        }
+        dishAppraisesService.removeById(id);
+        return ok();
     }
 
     private void validateScore(String fieldName, Integer score) {

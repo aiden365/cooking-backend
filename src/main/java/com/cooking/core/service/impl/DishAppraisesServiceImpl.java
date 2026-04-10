@@ -6,6 +6,7 @@ import com.cooking.base.BaseServiceImpl;
 import com.cooking.core.entity.DishAppraisesEntity;
 import com.cooking.core.mapper.DishAppraisesMapper;
 import com.cooking.core.service.DishAppraisesService;
+import com.cooking.dto.DishScoreDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,11 @@ public class DishAppraisesServiceImpl extends BaseServiceImpl<DishAppraisesMappe
     @Override
     public IPage<DishAppraisesEntity> findPage(IPage<DishAppraisesEntity> page, Map<String, Object> params) {
         return dishAppraisesMapper.findPage(page, params);
+    }
+
+    @Override
+    public IPage<DishScoreDTO> findDishScorePage(IPage<DishScoreDTO> page, Map<String, Object> params) {
+        return dishAppraisesMapper.findDishScorePage(page, params);
     }
 
     @Override

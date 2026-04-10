@@ -61,7 +61,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 用户统计信息接口开发 (已完成)
     - [x] 保存用户标签接口开发 (已完成)
     - [x] 生成用户个性化菜谱接口开发 (已完成)
-    - [ ] 删除用户接口开发 (当前进行)
+    - [x] 删除用户接口开发 (已完成)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -73,6 +73,8 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 保存菜品信息接口开发 (已完成)
     - [x] 获取菜品标签接口开发 (已完成)
     - [x] 删除菜谱接口开发 (已完成)
+    - [ ] 获取菜谱得分列表接口开发 (当前进行)
+    - [ ] 获取菜谱用户评价接口开发
 - [x] **阶段 3: 标签模块 (Lable Module)**
     - [x] 标签模块接口开发 (已完成)
 - [x] **阶段 4: 知识库模块 (Lable Module)**
@@ -91,9 +93,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 
 ## 5. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`删除用户接口开发`吧，请按照以下要求完成该任务：
-> 0：请先查阅 cookbook.sql 文件，了解与用户相关的数据表结构，及其相关的实体类。
-> 1：在src/main/java/com/cooking/api/User.java中实现。 创建删除用户接口 delete。
-> 2：接口接收 用户id 列表为参数，{"ids":[1,2,3,4]}
-> 3：在删除用户时，同时删除与用户相关的数据，包括不限于tbl_user_diet_record、tbl_user_dish_collect、tbl_user_individual_dish
-> 4：注意事物的使用，确保删除操作一致性。
+> 现在，让我们开始`获取菜谱得分列表接口开发`吧，请按照以下要求完成该任务：
+> 1：在src/main/java/com/cooking/api/DishAppraisesApi.java中实现。 创建菜谱分页列表接口。
+> 2：接口接收 {pageNo, pageSize, search} 其中 分页信息已由公共代码获取，搜索条件则模糊匹配菜谱名称
+> 3：要求在DishAppraisesMapper中添加获取菜谱得分列表的SQL, 查看tbl_dish_appraises表，根据菜谱id分组，并计算每个菜谱的manipulation_score、equal_score、satisfaction_score平均分，查询结果使用DTO类接收

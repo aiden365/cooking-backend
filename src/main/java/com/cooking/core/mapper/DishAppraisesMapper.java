@@ -3,6 +3,7 @@ package com.cooking.core.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.core.entity.DishAppraisesEntity;
+import com.cooking.dto.DishScoreDTO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Map;
@@ -18,4 +19,6 @@ import java.util.Map;
 public interface DishAppraisesMapper extends BaseMapper<DishAppraisesEntity> {
 
     IPage<DishAppraisesEntity> findPage(IPage<DishAppraisesEntity> page, @Param("params") Map<String, Object> params);
+
+    IPage<DishScoreDTO> findDishScorePage(IPage<DishScoreDTO> page, @Param("params") Map<String, Object> params);
 }

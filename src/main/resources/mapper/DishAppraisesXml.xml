@@ -13,4 +13,21 @@
 
         order by create_time desc
     </select>
+
+    <select id="findDishScorePage" resultType="com.cooking.dto.DishScoreDTO">
+        select
+            a.dish_id as dishId,
+            d.name as dishName,
+            round(avg(a.manipulation_score), 2) as manipulationScoreAvg,
+            round(avg(a.equal_score), 2) as equalScoreAvg,
+            round(avg(a.satisfaction_score), 2) as satisfactionScoreAvg
+        from tbl_dish_appraises a
+        left join tbl_dish d on a.dish_id = d.id
+        where 1 = 1
+        <if test="params.search != null and params.search != ''">
+            and d.name like concat('%', #{params.search}, '%')
+        </if>
+        group by a.dish_id, d.name
+        order by max(a.create_time) desc
+    </select>
 </mapper>
