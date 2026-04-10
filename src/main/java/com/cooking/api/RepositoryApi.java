@@ -4,9 +4,12 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
+import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseResponse;
 import com.cooking.core.entity.RepositoryEntity;
+import com.cooking.core.entity.UserEntity;
 import com.cooking.core.service.RepositoryService;
+import com.cooking.core.service.UserService;
 import jakarta.annotation.Resource;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
@@ -21,11 +24,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +45,8 @@ public class RepositoryApi extends BaseController {
     private VectorStore repositoryVectorStore;
     @Autowired
     private TokenTextSplitter tokenTextSplitter;
+    @Autowired
+    private UserService userService;
 
     @PostMapping("list")
     public BaseResponse list(@RequestBody JSONObject params) {
@@ -65,7 +66,11 @@ public class RepositoryApi extends BaseController {
         String search = params.getString("search");
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("search", search);
-        IPage<RepositoryEntity> entityIPage = repositoryService.findPage(page, params);
+        IPage<RepositoryEntity> entityIPage = repositoryService.findPage(page, queryParams);
+        Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityIPage.getRecords().stream().map(BaseEntity::getCreateUser).collect(Collectors.toSet()));
+        for (RepositoryEntity record : entityIPage.getRecords()) {
+            record.setCreatorName(Optional.ofNullable(userEntityMap.get(record.getCreateUser())).map(UserEntity::getUserName).orElse(""));
+        }
         return ok(entityIPage);
     }
 

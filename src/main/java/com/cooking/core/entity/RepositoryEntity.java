@@ -51,4 +51,11 @@ public class RepositoryEntity extends BaseEntity {
      */
     @TableField("type")
     private Integer type;
+
+
+    /**
+     * 创建人名称
+     */
+    @TableField(exist = false)
+    private String creatorName;
 }

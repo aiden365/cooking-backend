@@ -81,7 +81,7 @@ public class SpringAiConfig {
     }
 
     @Bean(name = "dishVectorStore")
-    public VectorStore dishVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("ollamaQwenEmbedding") EmbeddingModel embeddingModel) {
+    public VectorStore dishVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("qwenEmbedding") EmbeddingModel embeddingModel) {
         RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled(jedisConnectionFactory), embeddingModel);
         builder.initializeSchema(vectorStoreInitializeSchema);
         builder.indexName(dishVectorStoreIndexName);
@@ -96,7 +96,7 @@ public class SpringAiConfig {
     }
 
     @Bean(name = "repositoryVectorStore")
-    public VectorStore repositoryVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("ollamaQwenEmbedding") EmbeddingModel embeddingModel) {
+    public VectorStore repositoryVectorStore(JedisConnectionFactory jedisConnectionFactory, @Qualifier("qwenEmbedding") EmbeddingModel embeddingModel) {
         RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled(jedisConnectionFactory), embeddingModel);
         builder.initializeSchema(vectorStoreInitializeSchema);
         builder.indexName(repositoryVectorStoreIndexName);
