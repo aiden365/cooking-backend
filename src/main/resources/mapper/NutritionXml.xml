@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cooking.core.mapper.NutritionMapper">
+
+    <select id="findPage" resultType="com.cooking.core.entity.NutritionEntity">
+        select * from tbl_nutrition where 1=1
+        <if test="params.search != null and params.search != ''">
+            and name like concat('%',#{params.search},'%')
+        </if>
+        order by create_time desc
+    </select>
+</mapper>

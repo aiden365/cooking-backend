@@ -32,4 +32,10 @@ public class NutritionEntity extends BaseEntity {
      */
     @TableField("default_value")
     private String defaultValue;
+
+    /**
+     * 创建人名称
+     */
+    @TableField(exist = false)
+    private String creatorName;
 }
