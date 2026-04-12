@@ -1,5 +1,6 @@
 package com.cooking.api;
 
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
 import com.cooking.base.BaseEntity;
@@ -62,6 +63,8 @@ public class IndexApi extends BaseController {
         LocalDate today = LocalDate.now();
         LocalDate currentWeekStart = today.with(DayOfWeek.MONDAY);
         LocalDate lastWeekStart = currentWeekStart.minusWeeks(1);
+
+
 
         Map<String, Object> result = new HashMap<>();
         result.put("currentWeekData", buildDishCheckWeekData(currentWeekStart));
@@ -165,6 +168,8 @@ public class IndexApi extends BaseController {
                 .between(BaseEntity::getCreateTime, createStartTime, createEndTime)
                 .list();
 
+
+
         List<DishEntity> checkDishList = dishService.lambdaQuery()
                 .eq(DishEntity::getCheckStatus, 2)
                 .between(DishEntity::getCheckTime, createStartTime, createEndTime)
@@ -183,6 +188,7 @@ public class IndexApi extends BaseController {
         for (int i = 0; i < 7; i++) {
             result.add(countMap.getOrDefault(startDate.plusDays(i), 0L));
         }
+
         return result;
     }
 

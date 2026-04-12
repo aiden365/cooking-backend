@@ -101,11 +101,12 @@ public class UserApi extends BaseController {
         stringRedisTemplate.opsForValue().set(token, userEntity.getId().toString());
         JSONObject res = new JSONObject();
         res.put("avatar", null);
+        res.put("userName", userEntity.getUserName());
         res.put("username", userEntity.getUserName());
         res.put("nickname", userEntity.getUserName());
         res.put("roles", Collections.singleton("admin"));
         res.put("permissions", Collections.emptyList());
-        res.put("accessToken", Collections.emptyList());
+        res.put("accessToken", token);
         res.put("refreshToken", token);
         res.put("expires", "2099/01/01 00:00:00");
 
@@ -153,8 +154,10 @@ public class UserApi extends BaseController {
         String token = UUID.randomUUID().toString();
         stringRedisTemplate.opsForValue().set(token, userEntity.getId().toString(), 1, TimeUnit.HOURS);
         JSONObject res = new JSONObject();
-        res.put("user", userEntity);
-        res.put("token", token);
+        res.put("id", userEntity.getId());
+        res.put("userName", userEntity.getUserName());
+        res.put("expires", "2099/01/01 00:00:00");
+        res.put("accessToken", token);
         return ok(res);
     }
 
@@ -168,12 +171,7 @@ public class UserApi extends BaseController {
             return fail("邮箱格式不正确");
         }
 
-        UserEntity existUserEntity = userService.lambdaQuery()
-                .and(wrapper -> wrapper.eq(UserEntity::getUserCode, email).or().eq(UserEntity::getEmail, email)).list()
-                .stream().findAny().orElse(null);
-        if (existUserEntity != null) {
-            return fail("该邮箱已注册");
-        }
+
 
         String emailCode = RandomUtil.randomNumbers(6);
         emailUtils.sendVerificationCodeEmail(email, emailCode, EMAIL_CODE_EXPIRE_MINUTES);
@@ -219,6 +217,7 @@ public class UserApi extends BaseController {
     public BaseResponse resetPassword(@RequestBody JSONObject params) {
         Long userId = params.getLong("userId");
         String password = params.getString("password");
+        String emailCode = params.getString("emailCode");
         if (!UserEntity.validId(userId)) {
             return fail("id不能为空");
         }
@@ -228,6 +227,41 @@ public class UserApi extends BaseController {
         }
         if(StrUtil.isBlank( password)){
             return fail("密码不能为空");
+        }
+
+
+        userEntity.setUserPass(MD5.create().digestHex(password));
+        userService.saveOrUpdate(userEntity);
+        return ok(userEntity);
+    }
+
+    @PostMapping("forgot-password")
+    public BaseResponse forgotPassword(@RequestBody JSONObject params) {
+        String email = params.getString("email");
+        String verifyCode = params.getString("verifyCode");
+        String password = params.getString("password");
+        if (StrUtil.isBlank(email)) {
+            return fail("邮箱不能为空");
+        }
+        if (!isValidEmail(email)) {
+            return fail("邮箱格式不正确");
+        }
+        if (StrUtil.isBlank(password)) {
+            return fail("密码不能为空");
+        }
+        if (StrUtil.isBlank(verifyCode)) {
+            return fail("验证码不能为空");
+        }
+
+        UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getUserCode, email).list().stream().findAny().orElse(null);
+        if (userEntity == null) {
+            return fail("用户不存在");
+        }
+
+        String redisKey = buildEmailCodeKey(email);
+        String cachedCode = stringRedisTemplate.opsForValue().get(redisKey);
+        if (!StrUtil.equals(cachedCode, verifyCode)) {
+            return fail("邮箱验证码错误或已过期");
         }
 
         userEntity.setUserPass(MD5.create().digestHex(password));
