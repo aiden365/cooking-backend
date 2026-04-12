@@ -10,14 +10,14 @@
                 #{item}
             </foreach>
         </if>
-        <if test="params.search != null">
+        <if test="params.search != null and params.search != ''">
             and name like concat('%',#{params.search},'%')
         </if>
-        <if test="params.checkStatus != null">
+        <if test="params.checkStatus != null and params.checkStatus != ''">
             and check_status = #{params.checkStatus}
         </if>
 
-        <if test="params.name != null">
+        <if test="params.labelId != null and params.labelId != '' and params.labelId != 0">
             and exists(select 1 from tbl_dish_label_rel where dish_id = tbl_dish.id and label_id = #{params.labelId})
         </if>
         order by create_time desc

@@ -3,11 +3,10 @@ package com.cooking.base;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements BaseService<T> {
@@ -25,24 +24,38 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T> extends Servic
         return super.query().eq(StrUtil.toUnderlineCase(field), value).list();
     }
 
-    @Override
-    public List<T> findListByField(String field, List<Object> values) {
-        if (values == null || values.isEmpty()) {
-            return null;
-        }
-        return super.query().in(StrUtil.toUnderlineCase(field), values).list();
-    }
 
     @Override
     public Map<Long, T> findMapByField(String field, Object value) {
-        return super.query().eq(StrUtil.toUnderlineCase(field), value).list().stream().collect(Collectors.toMap(e -> Long.valueOf(ReflectUtil.getFieldValue(e, "id").toString()), e -> e, (e1, e2) -> e1));
-    }
-
-    @Override
-    public Map<Long, T> findMapByField(String field, List<Object> values) {
-        if (values == null || values.isEmpty()) {
+        if (value == null) {
             return null;
         }
-        return super.query().in(StrUtil.toUnderlineCase(field), values).list().stream().collect(Collectors.toMap(e -> Long.valueOf(ReflectUtil.getFieldValue(e, "id").toString()), e -> e, (e1,e2) -> e1));
+
+        QueryChainWrapper<T> query = super.query();
+        String columnName = StrUtil.toUnderlineCase(field);
+
+        if (value instanceof Collection<?>) {
+            Collection<?> collection = (Collection<?>) value;
+            if (collection.isEmpty()) {
+                return Collections.EMPTY_MAP;
+            }
+            query.in(columnName, collection);
+        } else if (value.getClass().isArray()) {
+            Object[] array = (Object[]) value;
+            if (array.length == 0) {
+                return Collections.EMPTY_MAP;
+            }
+            query.in(columnName, array);
+        } else {
+            query.eq(columnName, value);
+        }
+
+        List<T> list = query.list();
+        if (list == null || list.isEmpty()) {
+            return Collections.EMPTY_MAP;
+        }
+
+        return list.stream().collect(Collectors.toMap(e -> Long.valueOf(ReflectUtil.getFieldValue(e, "id").toString()),e -> e,(e1, e2) -> e1));
     }
+
 }

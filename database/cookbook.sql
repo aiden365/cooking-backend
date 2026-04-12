@@ -11,6 +11,7 @@ CREATE TABLE `tbl_dish`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '菜品名称',
   `img_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '菜品图片',
+  `video_path` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '菜品制作视频',
   `tips` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '烹饪小贴士',
   `take_times` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '预计用时',
   `source_type` int(11) NOT NULL COMMENT '来源：1=手动添加，2=AI生成',

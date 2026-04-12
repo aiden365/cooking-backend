@@ -37,17 +37,7 @@ public class DishEntity extends BaseEntity {
     @TableField("name")
     private String name;
 
-    /**
-     * 菜品图片
-     */
-    @TableField("img_path")
-    private String imgPath;
 
-    /**
-     * 烹饪小贴士
-     */
-    @TableField("tips")
-    private String tips;
 
     /**
      * 预计用时
@@ -99,6 +89,25 @@ public class DishEntity extends BaseEntity {
      */
     @TableField("total_score")
     private Integer totalScore;
+
+    /**
+     * 菜品图片
+     */
+    @TableField("img_path")
+    private String imgPath;
+
+    /**
+     * 菜品制作视频
+     */
+    @TableField("video_path")
+    private String videoPath;
+
+    /**
+     * 烹饪小贴士
+     */
+    @TableField("tips")
+    private String tips;
+
 
 
     /**
