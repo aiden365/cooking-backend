@@ -51,4 +51,16 @@ public class UserDishCollectEntity extends BaseEntity {
      */
     @TableField(exist = false)
     private String dishName;
+
+    /**
+     * 菜品图片
+     */
+    @TableField(exist = false)
+    private String dishImg;
+
+    /**
+     * 菜品收藏数量
+     */
+    @TableField(exist = false)
+    private String dishCollectCount;
 }

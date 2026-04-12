@@ -100,6 +100,7 @@ public class UserApi extends BaseController {
         String token = UUID.randomUUID().toString();
         stringRedisTemplate.opsForValue().set(token, userEntity.getId().toString());
         JSONObject res = new JSONObject();
+        res.put("id", userEntity.getId());
         res.put("avatar", null);
         res.put("userName", userEntity.getUserName());
         res.put("username", userEntity.getUserName());
