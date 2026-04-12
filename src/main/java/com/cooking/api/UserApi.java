@@ -187,6 +187,9 @@ public class UserApi extends BaseController {
     public BaseResponse detail(@RequestBody JSONObject params) {
         Long id = params.getLong("id");
         if (!UserEntity.validId(id)) {
+            id = SystemContextHelper.getCurrentUser().getId();
+        }
+        if (!UserEntity.validId(id)) {
             return fail("id不能为空");
         }
         UserEntity userEntity = userService.lambdaQuery().eq(UserEntity::getId, id).list().stream().findAny().orElse(null);
@@ -195,6 +198,26 @@ public class UserApi extends BaseController {
         }
         return ok(userEntity);
     }
+
+    @PostMapping("statistics")
+    public BaseResponse statistics() {
+
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+        Long userId = currentUser.getId();
+        Long collectCount = userDishCollectService.lambdaQuery().eq(UserDishCollectEntity::getUserId, userId).count();
+        Long shareCount = userShareService.lambdaQuery().eq(UserShareEntity::getUserId, userId).count();
+        Long labelCount = userLabelRelService.lambdaQuery().eq(UserLabelRelEntity::getUserId, userId).count();
+        Long nutritionCount = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).count();
+        Long individualDishCount = userIndividualDishService.lambdaQuery().eq(UserIndividualDishEntity::getUserId, userId).count();
+        JSONObject res = new JSONObject();
+        res.put("collectCount", collectCount);
+        res.put("shareCount", shareCount);
+        res.put("labelCount", labelCount);
+        res.put("nutritionCount", nutritionCount);
+        res.put("individualDishCount", individualDishCount);
+        return ok(res);
+    }
+
 
     @PostMapping("labels")
     public BaseResponse labels() {

@@ -52,8 +52,6 @@ public class LabelApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        int pageNo = params.getIntValue("pageNo");
-        int pageSize = params.getIntValue("pageSize");
         IPage<LabelEntity> entityIPage = labelService.findPage(new Page<>(pageNo, pageSize), params);
         return ok(entityIPage);
     }
