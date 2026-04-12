@@ -43,14 +43,23 @@ public class UserShareEntity extends BaseEntity {
     /**
      * 菜品图片
      */
-    @TableField("dish_img")
-    private String dishImg;
+    @TableField("img_path")
+    private String imgPath;
 
     /**
      * 分享描述
      */
     @TableField("description")
     private String description;
+
+
+
+    /**
+     * 分享点赞量
+     */
+    @TableField("start_count")
+    private Integer startCount;
+
 
     /**
      * 用户名

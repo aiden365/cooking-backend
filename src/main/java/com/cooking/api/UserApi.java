@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.crypto.digest.MD5;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseResponse;
@@ -14,6 +15,7 @@ import com.cooking.core.service.*;
 import com.cooking.dto.UserEmailCodeDTO;
 import com.cooking.dto.UserRegisterDTO;
 import com.cooking.utils.EmailUtils;
+import com.cooking.utils.SystemContextHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -194,6 +196,13 @@ public class UserApi extends BaseController {
         return ok(userEntity);
     }
 
+    @PostMapping("labels")
+    public BaseResponse labels() {
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+        List<Long> list = userLabelRelService.lambdaQuery().eq(UserLabelRelEntity::getUserId, currentUser.getId()).list().stream().map(UserLabelRelEntity::getLabelId).collect(Collectors.toList());
+        return ok(list);
+    }
+
     @PostMapping("update-status")
     public BaseResponse updateStatus(@RequestBody JSONObject params) {
         Long userId = params.getLong("userId");
@@ -322,9 +331,10 @@ public class UserApi extends BaseController {
     }
 
     @PostMapping("saveLabels")
-    public BaseResponse saveLabels(@RequestBody JSONObject params) {
-        Long userId = params.getLong("userId");
-        List<Long> labelIds = params.getList("labels", Long.class);
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse saveLabels(@RequestBody List<Long> labelIds) {
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+        Long userId = currentUser.getId();
 
         if (userId == null) {
             return fail("userId不能为空");
@@ -336,12 +346,14 @@ public class UserApi extends BaseController {
         Set<Long> newLabelIds = (labelIds == null) ? Collections.emptySet() : new HashSet<>(labelIds);
 
         long toAddCount = newLabelIds.stream().filter(id -> !existingLabelIds.contains(id)).count();
-        long toDeleteCount = existingLabelIds.stream().filter(id -> !newLabelIds.contains(id)).count();
+        List<Long> deleteLabelIds = existingLabelIds.stream().filter(id -> !newLabelIds.contains(id)).toList();
 
-        if (currentLabelCount + toAddCount - toDeleteCount > 5) {
+        if (currentLabelCount + toAddCount - deleteLabelIds.size() > 5) {
             return fail("用户标签总数不能超过5个");
         }
-
+        if (!deleteLabelIds.isEmpty()) {
+            userLabelRelService.lambdaUpdate().eq(UserLabelRelEntity::getUserId, userId).in(UserLabelRelEntity::getLabelId, deleteLabelIds).remove();
+        }
         userLabelRelService.saveUserLabels(userId, labelIds);
 
         return ok("用户标签保存成功");

@@ -105,32 +105,7 @@ public class LabelApi extends BaseController {
         return ok();
     }
 
-    @PostMapping("relUser")
-    public BaseResponse relUser(@RequestBody JSONObject params) {
-        Long userId = params.getLong("userId");
-        Long labelId = params.getLong("labelId");
-        LabelEntity labelEntity = validateUserLabelRel(userId, labelId);
-        if (!Integer.valueOf(1).equals(labelEntity.getType())) {
-            throw new ApiException(BaseResponse.Code.fail.code, "该标签不是用户标签");
-        }
 
-        LambdaQueryWrapper<UserLabelRelEntity> wrapper = new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId).eq(UserLabelRelEntity::getLabelId, labelId);
-        UserLabelRelEntity relEntity = userLabelRelService.getOne(wrapper);
-        if (relEntity == null) {
-            relEntity = UserLabelRelEntity.builder().userId(userId).labelId(labelId).build();
-            userLabelRelService.save(relEntity);
-        }
-        return ok(relEntity);
-    }
-
-    @PostMapping("unRelUser")
-    public BaseResponse unRelUser(@RequestBody JSONObject params) {
-        Long userId = params.getLong("userId");
-        Long labelId = params.getLong("labelId");
-        validateUserLabelRel(userId, labelId);
-        userLabelRelService.remove(new LambdaQueryWrapper<UserLabelRelEntity>().eq(UserLabelRelEntity::getUserId, userId).eq(UserLabelRelEntity::getLabelId, labelId));
-        return ok();
-    }
 
     @PostMapping("relDish")
     public BaseResponse relDish(@RequestBody JSONObject params) {

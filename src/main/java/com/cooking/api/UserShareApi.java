@@ -71,26 +71,27 @@ public class UserShareApi extends BaseController {
         return ok(entityIPage);
     }
 
+
     @PostMapping(value = "add")
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse add(@RequestBody JSONObject params) {
         Long userId = params.getLong("userId");
         Long dishId = params.getLong("dishId");
         String description = params.getString("description");
-        String dishImg = params.getString("dishImg");
+        String imgPath = params.getString("imgPath");
 
         UserEntity userEntity = validateUser(userId);
         DishEntity dishEntity = validateDish(dishId);
         validateDescription(description);
-        if (dishImg == null || dishImg.isEmpty()) {
-            throw new ApiException(BaseResponse.Code.fail.code, "菜品图片不能为空");
+        if (imgPath == null || imgPath.isEmpty()) {
+            throw new ApiException(BaseResponse.Code.fail.code, "分享图片不能为空");
         }
 
 
         UserShareEntity userShareEntity = UserShareEntity.builder().build();
         userShareEntity.setUserId(userEntity.getId());
         userShareEntity.setDishId(dishEntity.getId());
-        userShareEntity.setDishImg(dishImg);
+        userShareEntity.setImgPath(imgPath);
         userShareEntity.setDescription(description.trim());
         userShareService.save(userShareEntity);
 
@@ -117,7 +118,7 @@ public class UserShareApi extends BaseController {
         DishEntity dishEntity = validateDish(userShareEntity.getDishId());
 
         userShareService.removeById(shareId);
-        deleteShareImage(userShareEntity.getDishImg());
+        deleteShareImage(userShareEntity.getImgPath());
 
         int activeVal = dishEntity.getActiveVal() == null ? 0 : dishEntity.getActiveVal();
         dishEntity.setPopularVal(Math.max(0, activeVal - 1));

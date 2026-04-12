@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.cooking.base.BaseController;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +55,21 @@ public class NutritionApi extends BaseController {
             record.setCreatorName(Optional.ofNullable(userEntityMap.get(record.getCreateUser())).map(UserEntity::getUserName).orElse(""));
         }
         return ok(entityIPage);
+    }
+
+    @PostMapping("list")
+    public BaseResponse list() {
+
+        List<NutritionEntity> nutritionEntityList = nutritionService.list();
+        List<JSONObject> list = new ArrayList<>();
+        for (NutritionEntity nutritionEntity : nutritionEntityList) {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("id", nutritionEntity.getId());
+            jsonObject.put("nutritionName", nutritionEntity.getName());
+            jsonObject.put("defaultValue", nutritionEntity.getDefaultValue());
+            list.add(jsonObject);
+        }
+        return ok(list);
     }
 
     @PostMapping("detail")

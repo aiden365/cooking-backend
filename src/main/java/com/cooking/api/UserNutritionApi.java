@@ -1,5 +1,6 @@
 package com.cooking.api;
 
+import cn.hutool.core.lang.Opt;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -16,6 +17,8 @@ import com.cooking.core.service.UserNutritionRelService;
 import com.cooking.core.service.UserService;
 import com.cooking.enums.SystemParamEnum;
 import com.cooking.exceptions.ApiException;
+import com.cooking.utils.SystemContextHelper;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,8 +26,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -59,12 +62,35 @@ public class UserNutritionApi extends BaseController {
         return ok(entityIPage);
     }
 
+
+    @PostMapping("list")
+    public BaseResponse list() {
+
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+
+        List<UserNutritionRelEntity> relEntityList = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, currentUser.getId()).list();
+        Map<Long, NutritionEntity> nutritionEntityMap = nutritionService.findMapByIds(relEntityList.stream().map(UserNutritionRelEntity::getNutritionId).collect(Collectors.toSet()));
+        List<JSONObject> list = new ArrayList<>();
+        for (UserNutritionRelEntity relEntity : relEntityList) {
+
+            String nutritionName = Optional.ofNullable(nutritionEntityMap.get(relEntity.getNutritionId())).map(NutritionEntity::getName).orElse(null);
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("id", relEntity.getId());
+            jsonObject.put("nutritionId", relEntity.getNutritionId());
+            jsonObject.put("nutritionName", nutritionName);
+            jsonObject.put("aimValue", relEntity.getValue());
+            list.add(jsonObject);
+        }
+        return ok(list);
+    }
+
     @PostMapping("save")
     public BaseResponse save(@RequestBody JSONObject params) {
-        Long id = params.getLong("id");
-        Long userId = params.getLong("userId");
         Long nutritionId = params.getLong("nutritionId");
-        String value = params.getString("value");
+        String value = params.getString("aimValue");
+
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+        Long userId = currentUser.getId();
 
         UserEntity userEntity = validateUser(userId);
         validateText(value, "营养目标值");
@@ -77,19 +103,14 @@ public class UserNutritionApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "营养元素不存在");
         }
 
-        UserNutritionRelEntity entity;
-        if (id == null) {
+        UserNutritionRelEntity entity = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).eq(UserNutritionRelEntity::getNutritionId, nutritionId).one();
+        if (entity == null) {
             checkNutritionLimit(userId);
             entity = UserNutritionRelEntity.builder().build();
-        } else {
-            entity = userNutritionRelService.getById(id);
-            if (entity == null) {
-                throw new ApiException(BaseResponse.Code.fail.code, "营养目标不存在");
-            }
         }
         // 不能添加重重复的营养
         UserNutritionRelEntity existRel = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).eq(UserNutritionRelEntity::getNutritionId, nutritionId).one();
-        if (existRel != null && !existRel.getId().equals(id)) {
+        if (existRel != null && !existRel.getId().equals(entity.getId())) {
             throw new ApiException(BaseResponse.Code.fail.code, "用户已添加该营养目标");
         }
 
