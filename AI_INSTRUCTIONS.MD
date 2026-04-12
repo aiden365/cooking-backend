@@ -11,7 +11,10 @@
 - **AI 接入方案:** Spring AI 结合本地/远端部署的 Ollama (调用 Qwen 通义千问模型)
 - **构建工具:** Maven 请直接使用系统的maven进行构建任务，不要使用项目中的mvnw（我已移除了项目中的mvnw.cmd）
 
-## 3. 目录结构与分层规范
+## 3. 代码要求
+1. 尽可能的不要在循环中查询数据库
+
+## 4. 目录结构与分层规范
 本项目采用标准的 Controller-Service-DAO 三层架构，并严格区分数据传输对象。请将生成的代码放入正确的包路径下：
 
 ```text
@@ -41,7 +44,7 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
 |  |     └── template                               # 模板文件，如：提示词模板等
 ├── pom.xml                                         # maven项目配置文件     
 ```
-## 4. 开发路线图 (Project Roadmap)
+## 5. 开发路线图 (Project Roadmap)
 本项目采用模块化、渐进式的敏捷开发策略。请 AI 助手在每次回答前，先读取此处的勾选状态，严格将注意力集中在(当前进行)的阶段。
 
 - [x] **阶段 0: 基础设施搭建**
@@ -62,7 +65,8 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 保存用户标签接口开发 (已完成)
     - [x] 生成用户个性化菜谱接口开发 (已完成)
     - [x] 删除用户接口开发 (已完成)
-    - [ ] 完成用户菜谱收藏接口开发 (当前进行)
+    - [x] 完成用户菜谱收藏接口开发 (已完成)
+    - [ ] 获取用户饮食记录接口开发 (当前进行)
 - [x] **阶段 2: 菜谱模块 (Recipe Module)**
     - [x] 菜谱表、食材表设计 (已完成)
     - [x] 菜谱的 CRUD 与分页查询 (已完成)
@@ -92,29 +96,74 @@ P:\workspace\projects\cooking\cooking-backend       # 项目根目录
     - [x] 菜谱智能生成接口开发 (已完成)
     - [x] 菜谱智能生成添加RAG功能 (已完成)
 
-## 5. 当前执行任务 (Current Task)
+## 6. 当前执行任务 (Current Task)
 > **开发者指令：**
-> 现在，让我们开始`完成用户菜谱收藏接口开发`吧，请按照以下要求完成该任务：
-> 1：在src/main/java/com/cooking/api/UserDishCollectApi.java中实现。 完成day-group接口。
-> 2：接口接收 userId为参数
-> 3: 接口查询指定用户的菜谱收藏记录，并按照天（yyyy-MM-dd）进行分组，返回每个分组的菜谱信息及菜谱的总收藏数量。
-> 4：要求接口返回结构如下
+> 现在，让我们开始`获取用户饮食记录接口开发`吧，请按照以下要求完成该任务：
+> 1: 在src/main/java/com/cooking/api/UserDietRecordApi.java中实现。 完成detail接口。
+> 2: 接口接收 date 为参数，用户获取用户指定某一天的饮食记录，格式为：yyyy-MM-dd
+> 3: 要求接口返回结构如下
+> 4: 其中 key 对应餐次(UserDietRecordEntity.dietOrder), label 对应餐次名称， dishes 对应该餐次下的菜谱列表。
+> 5: 菜谱列表包含 id, dishId, name, dishImg, tags, shareCount, collectCount 七个字段，
+> 6: 其中 id 饮食记录id dishId 菜谱id dishImg 即菜谱的图片， tags 为标签列表，shareCount 即菜谱分享数量（对应 UserShareEntity） collectCount 即菜谱分享数量（对应 UserDishCollectEntity）
 
 ```json5
 
 //用户菜谱收藏接口响应示例
 
-{
-  "code": 0,
-  "message": "success",
-  "data": [
-    {
-      "day": "2026-04-01",
-      "dishes":[
-        {"id":1,"name":"菜品1","img":"/UploadFiles/dish1.jpg","labels":"家常菜,快手菜","collectTotalNum":5}
-      ]
-    }
-  ]
-}
+[
+  {
+    key: 'breakfast',
+    label: '早餐',
+    dishes: [{
+      id: 301,
+      dishId: 16,
+      name: '红烧排骨',
+      dishImg: "/UploadFile/dish.img",
+      tags: ['家常菜', '零厨艺'],
+      shareCount: 2,
+      collectCount: 5,
+    },],
+  },
+  {
+    key: 'lunch',
+    label: '午餐',
+    dishes: [
+      {
+        id: 301,
+        dishId: 16,
+        name: '红烧排骨',
+        dishImg: "/UploadFile/dish.img",
+        tags: ['家常菜', '零厨艺'],
+        shareCount: 2,
+        collectCount: 5,
+      },
+      {
+        id: 302,
+        dishId: 17,
+        name: '麻婆豆腐',
+        dishImg: "/UploadFile/dish.img",
+        tags: ['家常菜', '用料少'],
+        shareCount: 2,
+        collectCount: 5,
+      },
+    ],
+  },
+  {
+    key: 'dinner',
+    label: '晚餐',
+    dishes: [
+      {
+        id: 303,
+        dishId: 18,
+        name: '干锅花菜',
+        dishImg: "/UploadFile/dish.img",
+        tags: ['家常菜', '零厨艺'],
+        shareCount: 2,
+        collectCount: 5,
+        
+      },
+    ],
+  },
+]
 
 ```
