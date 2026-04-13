@@ -54,9 +54,9 @@ public class TestApi extends BaseController {
     @Resource(name = "ollamaQwenClient")
     private ChatClient ollamaQwenClient;
 
-    @Value("classpath:/template/user_prompt.md")
+    @Value("classpath:/template/dish_prompt.md")
     private org.springframework.core.io.Resource userTemplate;
-    @Value("classpath:/template/user_individual_prompt.md")
+    @Value("classpath:/template/dish_individual_prompt.md")
     private org.springframework.core.io.Resource user1Template;
 
     @Value("classpath:/template/system_prompt.md")

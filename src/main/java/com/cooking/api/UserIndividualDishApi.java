@@ -1,8 +1,5 @@
 package com.cooking.api;
 
-import cn.hutool.core.io.IoUtil;
-import cn.hutool.core.io.LineHandler;
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -40,12 +36,9 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -79,10 +72,18 @@ public class UserIndividualDishApi extends BaseController {
     @Resource(name = "qwen")
     private ChatModel qwenChatModel;
 
-    @Value("classpath:/template/user_individual_prompt.md")
+    @Value("classpath:/template/dish_individual_prompt.md")
     private org.springframework.core.io.Resource userIndividualPrompt;
     @Value("classpath:/template/system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
+    @Value("classpath:/template/dish_json_line.txt")
+    private org.springframework.core.io.Resource dishJsonLine;
+    @Value("classpath:/template/ai_fail.json5")
+    private org.springframework.core.io.Resource aiFailJson;
+
+
+
+
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
@@ -98,10 +99,12 @@ public class UserIndividualDishApi extends BaseController {
         return ok(entityIPage);
     }
 
-    @PostMapping("aigc")
-    public Flux<String> aigc(@RequestBody JSONObject params) {
-        Long dishId = params.getLong("dishId");
-        List<Long> labelIds = params.getList("labels", Long.class);
+    @RequestMapping("aigc")
+    public Flux<String> aigc() {
+        /*Long dishId = params.getLong("dishId");
+        List<Long> labelIds = params.getList("labels", Long.class);*/
+        Long dishId = 13L;
+        List<Long> labelIds = Arrays.asList(12L,13L,14L);
         if (!BaseEntity.validId(dishId)) {
             throw new ApiException(BaseResponse.Code.fail.code, "dishId不能为空");
         }
@@ -201,14 +204,23 @@ public class UserIndividualDishApi extends BaseController {
 
 
     private Prompt buildPrompt(DishEntity dishEntity, List<LabelEntity> labels, List<DishMaterialEntity> materialList, List<DishFlavorEntity> flavorList, List<DishStepEntity> stepList) {
+        String dishJsonLineString = null;
+        String aiFailJsonString = null;
 
-        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage();
+        try {
+            dishJsonLineString = dishJsonLine.getContentAsString(StandardCharsets.UTF_8);
+            aiFailJsonString = aiFailJson.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", aiFailJsonString));
         Map<String, Object> userParams = new HashMap<>();
         userParams.put("dishName", dishEntity.getName());
-        userParams.put("dietaryPreference", buildDietaryPreferenceText(labels));
-        userParams.put("existMaterial", buildMaterialText(materialList));
-        userParams.put("existFlavor", buildFlavorText(flavorList));
-        userParams.put("existStep", buildStepText(stepList));
+        userParams.put("preferences", buildDietaryPreferenceText(labels));
+        userParams.put("materialsText", buildMaterialText(materialList));
+        userParams.put("flavorsText", buildFlavorText(flavorList));
+        userParams.put("stepsText", buildStepText(stepList));
         Message userMessage = new PromptTemplate(userIndividualPrompt).createMessage(userParams);
 
         return Prompt.builder().messages(List.of(systemMessage, userMessage)).build();

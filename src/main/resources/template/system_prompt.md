@@ -23,35 +23,14 @@
 - 根据用户饮食偏好或身体状况，对选材、调料、做法进行调整。
 
 ## 流式 JSON Line 协议
-你必须按顺序输出多行 JSON，每一行都是一个完整 JSON 对象。
+你必须按顺序输出多行 JSON，每一行都是一个完整 JSON 对象。如下所示
 
-### 1. 开始行
-{"type":"start","status":"success"}
-
-### 2. 基本信息行
-{"type":"base","data":{"dish_name":"菜品名","take_times":"30分钟"}}
-
-### 3. 食材行
-每个食材单独输出一行：
-{"type":"material","data":{"name":"食材名","dosage":"用量","deal":"预处理方式"}}
-
-### 4. 调料行
-每个调料单独输出一行：
-{"type":"flavor","data":{"name":"调料名","dosage":"用量"}}
-
-### 5. 步骤行
-每个步骤单独输出一行：
-{"type":"step","data":{"step_number":1,"instruction":"具体动作"}}
-
-### 6. 贴士行
-{"type":"tips","data":"制作建议"}
-
-### 7. 结束行
-{"type":"done","status":"success"}
+{dishJSONLine}
 
 ## 错误输出协议
 如果菜品非法、不可食用或明显不合理，只允许输出一行：
-{"type":"error","status":"error","name":"食材名称","message":"生成失败原因"}
+{aiFailJson}
+
 
 ## 重要规则
 - 所有行都必须是合法 JSON。

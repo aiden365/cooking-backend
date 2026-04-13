@@ -1,0 +1,26 @@
+### 1. 开始行
+{"type":"start","status":"success"}
+
+### 2. 基本信息行
+{"type":"base","data":{"dish_name":"菜品名","take_times":"30分钟"}}
+
+### 3. 食材行
+每个食材单独输出一行：
+{"type":"material","data":{"name":"食材名","dosage":"用量","deal":"预处理方式"}}
+
+### 4. 调料行
+每个调料单独输出一行：
+{"type":"flavor","data":{"name":"调料名","dosage":"用量"}}
+
+### 5. 步骤行
+每个步骤单独输出一行：
+{"type":"step","data":{"step_number":1,"instruction":"具体动作"}}
+
+### 6. 贴士行
+{"type":"tips","data":"制作建议"}
+
+### 7. 结束行
+{"type":"done","status":"success"}
+
+## 错误输出协议
+如果菜品非法、不可食用或明显不合理，只允许输出一行：

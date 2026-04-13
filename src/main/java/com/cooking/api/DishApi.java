@@ -91,7 +91,7 @@ public class DishApi extends BaseController {
     @Resource(name = "repositoryVectorStore")
     private VectorStore repositoryVectorStore;
 
-    @Value("classpath:/template/user_prompt.md")
+    @Value("classpath:/template/dish_prompt.md")
     private org.springframework.core.io.Resource cookTemplate;
     @Value("classpath:/template/system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
