@@ -70,6 +70,12 @@ public class DishCommentEntity extends BaseEntity {
     private String userName;
 
     /**
+     * 子评论数量
+     */
+    @TableField(exist = false)
+    private Integer childCount;
+
+    /**
      * 子评论列表
      */
     @TableField(exist = false)

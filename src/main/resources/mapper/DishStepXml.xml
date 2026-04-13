@@ -4,6 +4,9 @@
 
     <select id="findPage" resultType="com.cooking.core.entity.DishStepEntity">
         select * from tbl_dish_step where 1=1
+        <if test="params.dishId != null">
+            and dish_id = #{params.dishId}
+        </if>
         order by sort desc
     </select>
 </mapper>

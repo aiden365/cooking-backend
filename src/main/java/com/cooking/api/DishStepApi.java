@@ -65,6 +65,12 @@ public class DishStepApi extends BaseController {
         return ok(entityIPage);
     }
 
+    @PostMapping("list")
+    public BaseResponse list(@RequestBody com.alibaba.fastjson2.JSONObject params) {
+        IPage<DishStepEntity> entityIPage = dishStepService.findPage(new Page<>(1, -1), params);
+        return ok(entityIPage.getRecords());
+    }
+
     @PostMapping(value = "save", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public BaseResponse save(@RequestParam(value = "id", required = false) Long id,
                              @RequestParam(value = "dishId", required = false) Long dishId,

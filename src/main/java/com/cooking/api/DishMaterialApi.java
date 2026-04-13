@@ -52,6 +52,12 @@ public class DishMaterialApi extends BaseController {
         return ok(entityIPage);
     }
 
+    @PostMapping("list")
+    public BaseResponse list(@RequestBody JSONObject params) {
+        IPage<DishMaterialEntity> entityIPage = dishMaterialService.findPage(new Page<>(1, -1), params);
+        return ok(entityIPage.getRecords());
+    }
+
     @PostMapping("add")
     public BaseResponse add(@RequestBody JSONObject params) {
         Long dishId = params.getLong("dishId");

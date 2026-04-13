@@ -36,4 +36,11 @@ public class DishFlavorApi extends BaseController {
         IPage<DishFlavorEntity> entityIPage = dishFlavorService.findPage(new Page<>(pageNo, pageSize), queryParams);
         return ok(entityIPage);
     }
+
+    @PostMapping("list")
+    public BaseResponse list(@RequestBody JSONObject params) {
+        IPage<DishFlavorEntity> entityIPage = dishFlavorService.findPage(new Page<>(1, -1), params);
+        return ok(entityIPage.getRecords());
+    }
+
 }
