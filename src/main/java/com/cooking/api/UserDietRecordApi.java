@@ -192,10 +192,7 @@ public class UserDietRecordApi extends BaseController {
 
         validateParams(userId, dishId, dietDate, dietOrder);
 
-        LambdaQueryWrapper<UserDietRecordEntity> wrapper = new LambdaQueryWrapper<UserDietRecordEntity>()
-                .eq(UserDietRecordEntity::getUserId, userId)
-                .eq(UserDietRecordEntity::getDietDate, dietDate)
-                .eq(UserDietRecordEntity::getDietOrder, dietOrder);
+        LambdaQueryWrapper<UserDietRecordEntity> wrapper = new LambdaQueryWrapper<UserDietRecordEntity>().eq(UserDietRecordEntity::getUserId, userId).eq(UserDietRecordEntity::getDietDate, dietDate).eq(UserDietRecordEntity::getDietOrder, dietOrder);
         UserDietRecordEntity entity = userDietRecordService.getOne(wrapper);
         if (entity == null) {
             entity = new UserDietRecordEntity();

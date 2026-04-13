@@ -88,7 +88,7 @@ public class DishEntity extends BaseEntity {
      * 菜谱总评分, 默认0表示未打分
      */
     @TableField("total_score")
-    private Integer totalScore;
+    private Double totalScore;
 
     /**
      * 菜品图片

@@ -26,6 +26,7 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -73,13 +74,49 @@ public class DishAppraisesApi extends BaseController {
     }
 
 
+    /**
+     * 菜品总分
+     */
+    @PostMapping("dish-total")
+    public BaseResponse dishTotal(@RequestBody JSONObject params) {
+        Long dishId = params.getLong("dishId");
+        if (ObjectUtils.isEmpty(dishId)) {
+            throw new ApiException(BaseResponse.Code.fail.code, "dishId不能为空");
+        }
+
+        DishEntity dishEntity = dishService.getById(dishId);
+        if (dishEntity == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "菜品不存在");
+        }
+
+        List<DishAppraisesEntity> entityList = dishAppraisesService.lambdaQuery().eq(DishAppraisesEntity::getDishId, dishId).list();
+        return ok(buildDishScoreResult(dishId, entityList));
+    }
+
+    /**
+     * 用户对菜谱评价记录
+     */
+    @PostMapping("user-record")
+    public BaseResponse userRecord(@RequestBody JSONObject params) {
+        Long dishId = params.getLong("dishId");
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+        Long userId = currentUser.getId();
+
+        DishAppraisesEntity dishAppraisesEntity = dishAppraisesService.lambdaQuery().eq(DishAppraisesEntity::getDishId, dishId).eq(DishAppraisesEntity::getUserId, userId).list().stream().findAny().orElse(null);
+        JSONObject res = new JSONObject();
+        res.put("manipulationScore", Optional.ofNullable(dishAppraisesEntity).map(DishAppraisesEntity::getManipulationScore).orElse(0));
+        res.put("equalScore", Optional.ofNullable(dishAppraisesEntity).map(DishAppraisesEntity::getEqualScore).orElse(0));
+        res.put("satisfactionScore", Optional.ofNullable(dishAppraisesEntity).map(DishAppraisesEntity::getSatisfactionScore).orElse(0));
+        return ok(res);
+    }
+
     @PostMapping("scoring")
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse scoring(@RequestBody JSONObject params) {
         Long dishId = params.getLong("dishId");
-        Integer manipulationScore = params.getInteger("manipulation_score");
-        Integer equalScore = params.getInteger("equal_score");
-        Integer satisfactionScore = params.getInteger("satisfaction_score");
+        Integer manipulationScore = params.getInteger("manipulationScore");
+        Integer equalScore = params.getInteger("equalScore");
+        Integer satisfactionScore = params.getInteger("satisfactionScore");
         UserEntity currentUser = SystemContextHelper.getCurrentUser();
 
         if (ObjectUtils.isEmpty(dishId)) {
@@ -119,21 +156,13 @@ public class DishAppraisesApi extends BaseController {
             return ok();
         }
 
-        double manipulationAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getManipulationScore).average().orElse(0D);
-        double equalAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getEqualScore).average().orElse(0D);
-        double satisfactionAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getSatisfactionScore).average().orElse(0D);
-        int totalScore = buildTotalScore(manipulationAvg, equalAvg, satisfactionAvg);
+        Map<String, Object> result = buildDishScoreResult(dishId, appraisesList);
+        BigDecimal totalScore = (BigDecimal) result.get("totalScore");
 
         dishEntity.setActiveVal(appraisesList.size());
-        dishEntity.setTotalScore(totalScore);
+        dishEntity.setTotalScore(totalScore.setScale(0, RoundingMode.HALF_UP).doubleValue());
         dishService.updateById(dishEntity);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("dishId", dishId);
-        result.put("manipulationAvg", manipulationAvg);
-        result.put("equalAvg", equalAvg);
-        result.put("satisfactionAvg", satisfactionAvg);
-        result.put("totalScore", totalScore);
         return ok(result);
     }
 
@@ -157,12 +186,26 @@ public class DishAppraisesApi extends BaseController {
         }
     }
 
-    private int buildTotalScore(double manipulationAvg, double equalAvg, double satisfactionAvg) {
+    private BigDecimal buildTotalScore(double manipulationAvg, double equalAvg, double satisfactionAvg) {
         return BigDecimal.valueOf(manipulationAvg).multiply(BigDecimal.valueOf(0.3))
                 .add(BigDecimal.valueOf(equalAvg).multiply(BigDecimal.valueOf(0.3)))
                 .add(BigDecimal.valueOf(satisfactionAvg).multiply(BigDecimal.valueOf(0.4)))
-                .multiply(BigDecimal.TEN)
-                .setScale(0, RoundingMode.HALF_UP)
-                .intValue();
+                .setScale(1, RoundingMode.HALF_UP);
+    }
+
+    private Map<String, Object> buildDishScoreResult(Long dishId, List<DishAppraisesEntity> appraisesList) {
+        double manipulationAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getManipulationScore).average().orElse(0D);
+        double equalAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getEqualScore).average().orElse(0D);
+        double satisfactionAvg = appraisesList.stream().mapToInt(DishAppraisesEntity::getSatisfactionScore).average().orElse(0D);
+        BigDecimal totalScore = buildTotalScore(manipulationAvg, equalAvg, satisfactionAvg);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("dishId", dishId);
+        result.put("manipulationAvg", manipulationAvg);
+        result.put("equalAvg", equalAvg);
+        result.put("satisfactionAvg", satisfactionAvg);
+        result.put("totalScore", totalScore);
+        result.put("appraiseCount", appraisesList.size());
+        return result;
     }
 }
