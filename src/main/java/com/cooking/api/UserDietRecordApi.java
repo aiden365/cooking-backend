@@ -183,13 +183,14 @@ public class UserDietRecordApi extends BaseController {
         return ok(result);
     }
 
-    @PostMapping("save")
-    public BaseResponse save(@RequestBody JSONObject params) {
-        Long userId = params.getLong("userId");
+    @PostMapping("add")
+    public BaseResponse add(@RequestBody JSONObject params) {
         Long dishId = params.getLong("dishId");
         String dietDate = params.getString("dietDate");
         Integer dietOrder = params.getInteger("dietOrder");
 
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+        Long userId = currentUser.getId();
         validateParams(userId, dishId, dietDate, dietOrder);
 
         LambdaQueryWrapper<UserDietRecordEntity> wrapper = new LambdaQueryWrapper<UserDietRecordEntity>().eq(UserDietRecordEntity::getUserId, userId).eq(UserDietRecordEntity::getDietDate, dietDate).eq(UserDietRecordEntity::getDietOrder, dietOrder);

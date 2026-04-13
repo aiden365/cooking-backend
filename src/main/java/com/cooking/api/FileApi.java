@@ -75,6 +75,6 @@ public class FileApi extends BaseController {
             return fail("文件上传失败");
         }
 
-        return ok(uploadUrl + filePath);
+        return ok("文件上传成功", filePath);
     }
 }

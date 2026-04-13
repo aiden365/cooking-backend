@@ -2,10 +2,12 @@ package com.cooking.api;
 
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.json.JSONUtil;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
 import com.cooking.utils.EmailUtils;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.SynchronousSink;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +40,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping()
 public class TestApi extends BaseController {
@@ -57,6 +61,9 @@ public class TestApi extends BaseController {
 
     @Value("classpath:/template/system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
+
+    @Value("classpath:/template/test_promot1.txt")
+    private org.springframework.core.io.Resource testPromot1;
 
     @Value("classpath:/template/111.md")
     private org.springframework.core.io.Resource prompt111;
@@ -98,6 +105,82 @@ public class TestApi extends BaseController {
         spec.system("你是一名厨师，只能回答用户有关烹饪的问题，其他的领域的问题，提示无可奉告");
         spec.user(msg);
         return spec.stream().content();
+    }
+
+    @GetMapping("test41")
+    public Flux<String> test41() {
+        String prompt = null;
+        try {
+            prompt = testPromot1.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        StringBuilder buffer = new StringBuilder();
+        StringBuilder fullResponse = new StringBuilder();
+
+        Flux<String> lineFlux = qwenChatModel.stream(prompt).handle((String chunk, SynchronousSink<String> sink) -> appendAndEmitCompleteLines(buffer, chunk, sink));
+
+        Flux<String> remainingFlux = Flux.defer(() -> {
+            String lastLine = buffer.toString().trim();
+            if (lastLine.isEmpty()) {
+                return Flux.empty();
+            }
+            if (isCompleteJsonObject(lastLine)) {
+                buffer.setLength(0);
+                return Flux.just(lastLine);
+            }
+            return Flux.empty();
+        });
+
+        return lineFlux.concatWith(remainingFlux).doOnNext(line -> appendLine(fullResponse, line)).doOnComplete(() -> log.info("test41 AI full response:\n{}", fullResponse));
+    }
+
+    private void appendAndEmitCompleteLines(StringBuilder buffer, String chunk, SynchronousSink<String> sink) {
+        if (chunk == null || chunk.isEmpty()) {
+            return;
+        }
+
+        buffer.append(chunk);
+        int lineBreakIndex;
+        while ((lineBreakIndex = findLineBreak(buffer)) >= 0) {
+            String line = buffer.substring(0, lineBreakIndex).trim();
+            int deleteLength = lineBreakIndex + 1;
+            if (lineBreakIndex + 1 < buffer.length() && buffer.charAt(lineBreakIndex) == '\r' && buffer.charAt(lineBreakIndex + 1) == '\n') {
+                deleteLength = lineBreakIndex + 2;
+            }
+            buffer.delete(0, deleteLength);
+
+            if (!line.isEmpty() && isCompleteJsonObject(line)) {
+                sink.next(line);
+            }
+        }
+    }
+
+    private int findLineBreak(StringBuilder buffer) {
+        for (int i = 0; i < buffer.length(); i++) {
+            char current = buffer.charAt(i);
+            if (current == '\n' || current == '\r') {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private boolean isCompleteJsonObject(String text) {
+        try {
+            JSONUtil.parseObj(text);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void appendLine(StringBuilder builder, String line) {
+        if (builder.length() > 0) {
+            builder.append(System.lineSeparator());
+        }
+        builder.append(line);
     }
 
     @GetMapping("test5")

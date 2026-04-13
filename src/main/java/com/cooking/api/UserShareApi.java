@@ -14,6 +14,7 @@ import com.cooking.core.service.UserService;
 import com.cooking.core.service.UserShareService;
 import com.cooking.enums.PathEnum;
 import com.cooking.exceptions.ApiException;
+import com.cooking.utils.SystemContextHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
@@ -79,6 +80,11 @@ public class UserShareApi extends BaseController {
         Long dishId = params.getLong("dishId");
         String description = params.getString("description");
         String imgPath = params.getString("imgPath");
+
+        if(userId == null){
+            UserEntity currentUser = SystemContextHelper.getCurrentUser();
+            userId = currentUser.getId();
+        }
 
         UserEntity userEntity = validateUser(userId);
         DishEntity dishEntity = validateDish(dishId);

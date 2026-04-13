@@ -1,31 +1,16 @@
-### 任务说明
+### 用户任务
 请为我详细介绍 **{dishName}** 的制作方法。
 
 ### 饮食偏好
 请按照下列饮食偏好或身体状况，在现有菜谱的基础上为我进行调料的增减、食材的选材、烹饪方法：
-```text
-{dietaryPreference}
-```
+{preferences}
 
 ### 现有菜谱
-
 #### 主料清单
-```text
-{existMaterial}
-```
+{materialsText}
 
 #### 调料清单
-```text
-{existFlavor}
-```
+{flavorsText}
 
 #### 制作步骤
-```text
-{existStep}
-```
-
-### 输出要求
-1. **数据格式**：请直接返回符合要求的JSON结构。
-2. **语言**：中文。
-
-
+{stepsText}

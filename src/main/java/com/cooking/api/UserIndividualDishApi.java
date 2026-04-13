@@ -1,6 +1,7 @@
 package com.cooking.api;
 
 import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.io.LineHandler;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -18,11 +19,14 @@ import com.cooking.core.service.UserIndividualDishService;
 import com.cooking.core.service.UserService;
 import com.cooking.dto.AIRecipeDTO;
 import com.cooking.exceptions.ApiException;
+import com.cooking.utils.AiResponseUtils;
 import com.cooking.utils.SystemContextHelper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -33,11 +37,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.SynchronousSink;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -48,8 +57,9 @@ import java.util.stream.Collectors;
  * @author aiden
  * @since 2026-04-09
  */
+@Slf4j
 @RestController
-@RequestMapping("user/individual/dish")
+@RequestMapping("individualDish")
 public class UserIndividualDishApi extends BaseController {
 
     @Autowired
@@ -66,17 +76,13 @@ public class UserIndividualDishApi extends BaseController {
     private DishStepService dishStepService;
     @Autowired
     private LabelService labelService;
-    @Resource(name = "ollamaQwen")
+    @Resource(name = "qwen")
     private ChatModel qwenChatModel;
 
     @Value("classpath:/template/user_individual_prompt.md")
     private org.springframework.core.io.Resource userIndividualPrompt;
     @Value("classpath:/template/system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
-    @Value("classpath:/template/ai_success.json5")
-    private org.springframework.core.io.Resource aiSuccessResource;
-    @Value("classpath:/template/ai_fail.json5")
-    private org.springframework.core.io.Resource aiFailResource;
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
@@ -93,7 +99,7 @@ public class UserIndividualDishApi extends BaseController {
     }
 
     @PostMapping("aigc")
-    public BaseResponse aigc(@RequestBody JSONObject params) {
+    public Flux<String> aigc(@RequestBody JSONObject params) {
         Long dishId = params.getLong("dishId");
         List<Long> labelIds = params.getList("labels", Long.class);
         if (!BaseEntity.validId(dishId)) {
@@ -125,28 +131,33 @@ public class UserIndividualDishApi extends BaseController {
         List<DishFlavorEntity> flavorList = dishFlavorService.lambdaQuery().eq(DishFlavorEntity::getDishId, dishId).list();
         List<DishStepEntity> stepList = dishStepService.lambdaQuery().eq(DishStepEntity::getDishId, dishId).orderByAsc(DishStepEntity::getSort).list();
 
-        String aiText = callAi(dishEntity, labels, materialList, flavorList, stepList);
-        AIRecipeDTO aiRecipeDTO = parseAiRecipe(aiText);
-        if ("error".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
-            throw new ApiException(BaseResponse.Code.fail.code, aiRecipeDTO.getMessage());
-        }
-        if (!"success".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI生成失败");
-        }
 
-        String content = extractJsonText(aiText);
-        UserIndividualDishEntity entity = userIndividualDishService.lambdaQuery().eq(UserIndividualDishEntity::getUserId, currentUser.getId()).eq(UserIndividualDishEntity::getDishId, dishId).one();
-        if (entity == null) {
-            entity = new UserIndividualDishEntity();
-            entity.setUserId(currentUser.getId());
-            entity.setDishId(dishId);
-        }
-        entity.setContent(content);
-        userIndividualDishService.saveOrUpdate(entity);
+        Consumer<StringBuilder> lineHandler = (aiFullResponse) -> {
 
-        entity.setDishName(dishEntity.getName());
-        entity.setDishImg(dishEntity.getImgPath());
-        return ok(entity);
+            AIRecipeDTO aiRecipeDTO = parseAiRecipe(aiFullResponse.toString());
+            if ("error".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
+                throw new ApiException(BaseResponse.Code.fail.code, aiRecipeDTO.getMessage());
+            }
+            if (!"success".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
+                throw new ApiException(BaseResponse.Code.fail.code, "AI生成失败");
+            }
+
+            String content = JSONObject.toJSONString(aiRecipeDTO);
+            UserIndividualDishEntity entity = userIndividualDishService.lambdaQuery().eq(UserIndividualDishEntity::getUserId, currentUser.getId()).eq(UserIndividualDishEntity::getDishId, dishId).one();
+            if (entity == null) {
+                entity = new UserIndividualDishEntity();
+                entity.setUserId(currentUser.getId());
+                entity.setDishId(dishId);
+            }
+            entity.setContent(content);
+            userIndividualDishService.saveOrUpdate(entity);
+
+            entity.setDishName(dishEntity.getName());
+            entity.setDishImg(dishEntity.getImgPath());
+        };
+
+
+        return callAi(lineHandler, dishEntity, labels, materialList, flavorList, stepList);
     }
 
 
@@ -161,32 +172,45 @@ public class UserIndividualDishApi extends BaseController {
         return ok();
     }
 
-    private String callAi(DishEntity dishEntity, List<LabelEntity> labels, List<DishMaterialEntity> materialList,List<DishFlavorEntity> flavorList, List<DishStepEntity> stepList) {
+    private Flux<String> callAi(Consumer<StringBuilder> complete, DishEntity dishEntity, List<LabelEntity> labels, List<DishMaterialEntity> materialList,List<DishFlavorEntity> flavorList, List<DishStepEntity> stepList) {
         Prompt prompt = buildPrompt(dishEntity, labels, materialList, flavorList, stepList);
-        return qwenChatModel.call(prompt).getResult().getOutput().getText();
+
+
+
+        StringBuilder buffer = new StringBuilder();
+        StringBuilder fullResponse = new StringBuilder();
+
+        Flux<String> lineFlux = qwenChatModel.stream(prompt).map(AiResponseUtils::extractChunkText).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
+
+        Flux<String> remainingFlux = Flux.defer(() -> {
+            String lastLine = buffer.toString().trim();
+            if (lastLine.isEmpty()) {
+                return Flux.empty();
+            }
+            if (AiResponseUtils.isCompleteJsonObject(lastLine)) {
+                buffer.setLength(0);
+                return Flux.just(lastLine);
+            }
+            return Flux.empty();
+        });
+
+        return lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line)).doOnComplete(() -> complete.accept(fullResponse));
     }
 
-    private Prompt buildPrompt(DishEntity dishEntity, List<LabelEntity> labels, List<DishMaterialEntity> materialList,
-                               List<DishFlavorEntity> flavorList, List<DishStepEntity> stepList) {
-        String formatSuccess;
-        String formatFail;
-        try (InputStream successIns = aiSuccessResource.getInputStream();
-             InputStream failIns = aiFailResource.getInputStream()) {
-            formatSuccess = IoUtil.read(successIns, StandardCharsets.UTF_8);
-            formatFail = IoUtil.read(failIns, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new ApiException(BaseResponse.Code.fail.code, "读取提示词模板失败");
-        }
 
-        Message systemMessage = new SystemPromptTemplate(systemPrompt)
-                .createMessage(Map.of("format_success", formatSuccess, "format_fail", formatFail));
-        Message userMessage = new PromptTemplate(userIndividualPrompt).createMessage(Map.of(
-                "dishName", dishEntity.getName(),
-                "dietaryPreference", buildDietaryPreferenceText(labels),
-                "existMaterial", buildMaterialText(materialList),
-                "existFlavor", buildFlavorText(flavorList),
-                "existStep", buildStepText(stepList)
-        ));
+
+
+    private Prompt buildPrompt(DishEntity dishEntity, List<LabelEntity> labels, List<DishMaterialEntity> materialList, List<DishFlavorEntity> flavorList, List<DishStepEntity> stepList) {
+
+        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage();
+        Map<String, Object> userParams = new HashMap<>();
+        userParams.put("dishName", dishEntity.getName());
+        userParams.put("dietaryPreference", buildDietaryPreferenceText(labels));
+        userParams.put("existMaterial", buildMaterialText(materialList));
+        userParams.put("existFlavor", buildFlavorText(flavorList));
+        userParams.put("existStep", buildStepText(stepList));
+        Message userMessage = new PromptTemplate(userIndividualPrompt).createMessage(userParams);
+
         return Prompt.builder().messages(List.of(systemMessage, userMessage)).build();
     }
 
@@ -233,46 +257,78 @@ public class UserIndividualDishApi extends BaseController {
     }
 
     private AIRecipeDTO parseAiRecipe(String aiText) {
-        String jsonText = extractJsonText(aiText);
-        JSONObject root;
-        try {
-            root = JSONObject.parseObject(jsonText);
-        } catch (Exception e) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI返回结果无法解析");
-        }
-
         AIRecipeDTO dto = new AIRecipeDTO();
-        dto.setStatus(root.getString("status"));
-        dto.setDishName(root.getString("dish_name"));
-        dto.setTakeTimes(root.getString("take_times"));
-        dto.setTips(root.getString("tips"));
-        dto.setMessage(root.getString("message"));
+        dto.setMaterials(new ArrayList<>());
+        dto.setFlavors(new ArrayList<>());
+        dto.setSteps(new ArrayList<>());
 
-        JSONArray materials = root.getJSONArray("materials");
-        if (materials != null) {
-            dto.setMaterials(materials.toJavaList(AIRecipeDTO.Materials.class));
-        }
-        JSONArray flavors = root.getJSONArray("flavors");
-        if (flavors != null) {
-            dto.setFlavors(flavors.toJavaList(AIRecipeDTO.Flavors.class));
-        }
-        JSONArray steps = root.getJSONArray("steps");
-        if (steps != null) {
-            dto.setSteps(steps.toJavaList(AIRecipeDTO.Steps.class));
+        for (String line : AiResponseUtils.extractJsonLines(aiText)) {
+            JSONObject root;
+            try {
+                root = JSONObject.parseObject(line);
+            } catch (Exception e) {
+                throw new ApiException(BaseResponse.Code.fail.code, "AI返回结果无法解析");
+            }
+
+            String type = root.getString("type");
+            if (!StringUtils.hasText(type)) {
+                continue;
+            }
+
+            if ("error".equalsIgnoreCase(type)) {
+                dto.setStatus(root.getString("status"));
+                dto.setDishName(AiResponseUtils.firstNonBlank(root.getString("dishName"), root.getString("dish_name"), root.getString("name")));
+                dto.setMessage(root.getString("message"));
+                continue;
+            }
+
+            if ("start".equalsIgnoreCase(type) || "done".equalsIgnoreCase(type)) {
+                dto.setStatus(root.getString("status"));
+                continue;
+            }
+
+            if ("tips".equalsIgnoreCase(type)) {
+                dto.setTips(AiResponseUtils.firstNonBlank(root.getString("data"), root.getString("tips")));
+                continue;
+            }
+
+            JSONObject data = root.getJSONObject("data");
+            if (data == null) {
+                continue;
+            }
+
+            if ("base".equalsIgnoreCase(type)) {
+                dto.setDishName(AiResponseUtils.firstNonBlank(data.getString("dishName"), data.getString("dish_name")));
+                dto.setTakeTimes(AiResponseUtils.firstNonBlank(data.getString("takeTimes"), data.getString("take_times")));
+                continue;
+            }
+
+            if ("material".equalsIgnoreCase(type)) {
+                AIRecipeDTO.Materials material = data.toJavaObject(AIRecipeDTO.Materials.class);
+                dto.getMaterials().add(material);
+                continue;
+            }
+
+            if ("flavor".equalsIgnoreCase(type)) {
+                AIRecipeDTO.Flavors flavor = data.toJavaObject(AIRecipeDTO.Flavors.class);
+                dto.getFlavors().add(flavor);
+                continue;
+            }
+
+            if ("step".equalsIgnoreCase(type)) {
+                AIRecipeDTO.Steps step = new AIRecipeDTO.Steps();
+                step.setStepNumber(AiResponseUtils.firstNonNull(data.getInteger("stepNumber"), data.getInteger("step_number")));
+                step.setInstruction(data.getString("instruction"));
+                dto.getSteps().add(step);
+            }
         }
         return dto;
     }
 
-    private String extractJsonText(String aiText) {
-        if (!StringUtils.hasText(aiText)) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI返回为空");
-        }
-        int start = aiText.indexOf('{');
-        int end = aiText.lastIndexOf('}');
-        if (start < 0 || end <= start) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI返回格式不正确");
-        }
-        return aiText.substring(start, end + 1);
-    }
+
+
+
+
+
 
 }
