@@ -1,7 +1,6 @@
 package com.cooking.api;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -15,6 +14,7 @@ import com.cooking.core.service.*;
 import com.cooking.dto.AIRecipeDTO;
 import com.cooking.dto.DishSaveDTO;
 import com.cooking.exceptions.ApiException;
+import com.cooking.utils.AiResponseUtils;
 import com.cooking.utils.SystemContextHelper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -36,10 +36,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.SynchronousSink;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -84,21 +88,24 @@ public class DishApi extends BaseController {
 
 
 
-    @Resource(name = "ollamaQwen")
+    @Resource(name = "qwen")
     private ChatModel qwenChatModel;
+    @Resource(name = "ollamaQwen")
+    private ChatModel ollamaQwen;
+
     @Resource(name = "dishVectorStore")
     private VectorStore dishVectorStore;
     @Resource(name = "repositoryVectorStore")
     private VectorStore repositoryVectorStore;
 
     @Value("classpath:/template/dish_prompt.md")
-    private org.springframework.core.io.Resource cookTemplate;
+    private org.springframework.core.io.Resource dishPrompt;
     @Value("classpath:/template/system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
-    @Value("classpath:/template/ai_success.json5")
-    private org.springframework.core.io.Resource aiSuccessResource;
+    @Value("classpath:/template/dish_json_line.txt")
+    private org.springframework.core.io.Resource dishJsonLine;
     @Value("classpath:/template/ai_fail.json5")
-    private org.springframework.core.io.Resource aiFailResource;
+    private org.springframework.core.io.Resource aiFailJson;
 
 
     @PostMapping("page")
@@ -154,9 +161,9 @@ public class DishApi extends BaseController {
     @PostMapping("search")
     public BaseResponse search(@RequestBody JSONObject params) {
         String search = params.getString("search");
-        System.out.println( search);
-        SearchRequest searchRequest = SearchRequest.builder().query(search).similarityThreshold(0.8f).topK(5).build();
+        SearchRequest searchRequest = SearchRequest.builder().query(search).topK(5).build();
         List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
+
         return ok(documents);
     }
 
@@ -276,69 +283,80 @@ public class DishApi extends BaseController {
         return ok(dishEntity);
     }
 
+    @PostMapping("verifyName")
+    public BaseResponse verifyName(@RequestBody JSONObject params) {
+        String dishName = params.getString("dishName");
+        if(StrUtil.isNotBlank(dishName)){
+            String res = ollamaQwen.call(MessageFormat.format("请验证下这是否是一个合法的菜名，只需回答是或不是。名称为：{0}", dishName));
+        }
+        return ok(true);
+    }
+
     /**
      * AI生成并保存菜谱
      */
     @PostMapping("aigc")
-    public BaseResponse aigc(@RequestBody JSONObject params) {
+    public Flux<String> aigc(@RequestBody JSONObject params) {
         String dishName = params.getString("dishName");
         if (!StringUtils.hasText(dishName)) {
             throw new ApiException(BaseResponse.Code.fail.code, "dishName不能为空");
         }
 
-        String aiText = callAi(dishName);
-        AIRecipeDTO aiRecipeDTO = parseAiRecipe(aiText);
+        Consumer<StringBuilder> complete = (aiFullResponse) -> {
+            AIRecipeDTO aiRecipeDTO = AIRecipeDTO.parseAiRecipe(aiFullResponse.toString());
+            if ("error".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
+                throw new ApiException(BaseResponse.Code.fail.code, aiRecipeDTO.getMessage());
+            }
+            if (!"success".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
+                throw new ApiException(BaseResponse.Code.fail.code, "AI生成失败");
+            }
 
-        if ("error".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
-            throw new ApiException(BaseResponse.Code.fail.code, aiRecipeDTO.getMessage());
-        }
-        if (!"success".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI生成失败");
-        }
-        if (!StringUtils.hasText(aiRecipeDTO.getDishName())) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI返回菜品名称为空");
-        }
+            // AI调用在事务外，避免慢调用占用事务。
+            dishService.saveAigcRecipe(aiRecipeDTO);
+        };
 
-        DishEntity existed = dishService.lambdaQuery().eq(DishEntity::getName, aiRecipeDTO.getDishName()).one();
-        if (existed != null) {
-            return ok("菜品已存在，已跳过生成", existed);
-        }
-
-        // AI调用在事务外，避免慢调用占用事务。
-        DishEntity savedDish = dishService.saveAigcRecipe(aiRecipeDTO);
-
-        try {
-            Map<String, Object> metadata = new HashMap<>();
-            metadata.put("dishId", savedDish.getId());
-            metadata.put("dishName", savedDish.getName());
-            dishVectorStore.add(List.of(new Document(savedDish.getId().toString(),buildVectorText(aiRecipeDTO), metadata)));
-        } catch (Exception e) {
-            log.error("保存向量数据库失败,dishId={}", savedDish.getId(), e);
-        }
-
-        return ok(savedDish);
+        return callAi(dishName, complete);
     }
 
-    private String callAi(String dishName) {
-        Prompt prompt = buildPrompt(dishName, retrieveKnowledgeContext(dishName));
-        return qwenChatModel.call(prompt).getResult().getOutput().getText();
+    private Flux<String> callAi(String dishName, Consumer<StringBuilder> complete) {
+        Prompt prompt = buildPrompt(dishName, null);
+
+        StringBuilder buffer = new StringBuilder();
+        StringBuilder fullResponse = new StringBuilder();
+
+        Flux<String> lineFlux = ollamaQwen.stream(prompt).map(AiResponseUtils::extractChunkText).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
+
+        Flux<String> remainingFlux = Flux.defer(() -> {
+            String lastLine = buffer.toString().trim();
+            if (lastLine.isEmpty()) {
+                return Flux.empty();
+            }
+            if (AiResponseUtils.isCompleteJsonObject(lastLine)) {
+                buffer.setLength(0);
+                return Flux.just(lastLine);
+            }
+            return Flux.empty();
+        });
+
+        return lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line)).doOnComplete(() -> complete.accept(fullResponse));
+
     }
 
     private Prompt buildPrompt(String dishName, String knowledgeContext) {
-        String formatSuccess;
-        String formatFail;
-        try (InputStream successIns = aiSuccessResource.getInputStream();
-             InputStream failIns = aiFailResource.getInputStream()) {
-            formatSuccess = IoUtil.read(successIns, StandardCharsets.UTF_8);
-            formatFail = IoUtil.read(failIns, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new ApiException(BaseResponse.Code.fail.code, "读取提示词模板失败");
+        String dishJsonLineString = null;
+        String aiFailJsonString = null;
+
+        try {
+            dishJsonLineString = dishJsonLine.getContentAsString(StandardCharsets.UTF_8);
+            aiFailJsonString = aiFailJson.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
-        SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemPrompt);
-        Message systemMessage = systemPromptTemplate.createMessage(Map.of("format_success", formatSuccess, "format_fail", formatFail));
+        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", aiFailJsonString));
 
-        PromptTemplate promptTemplate = new PromptTemplate(cookTemplate);
+
+        PromptTemplate promptTemplate = new PromptTemplate(dishPrompt);
         Message userMessage = promptTemplate.createMessage(Map.of("dishName", dishName));
 
         List<Message> messages = new ArrayList<>();
@@ -449,12 +467,6 @@ public class DishApi extends BaseController {
         return aiText.substring(start, end + 1);
     }
 
-    private String buildVectorText(AIRecipeDTO dto) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(dto.getDishName()).append(',');
-        sb.append(CollUtil.join(dto.getMaterials().stream().map(AIRecipeDTO.Materials::getName).collect(Collectors.toList()), ","));
-        return sb.toString();
-    }
 
     @PostMapping("saveLabels")
     public BaseResponse saveLabels(@RequestBody JSONObject params) {

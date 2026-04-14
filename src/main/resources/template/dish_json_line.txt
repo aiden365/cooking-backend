@@ -2,7 +2,7 @@
 {"type":"start","status":"success"}
 
 ### 2. 基本信息行
-{"type":"base","data":{"dish_name":"菜品名","take_times":"30分钟"}}
+{"type":"base","data":{"dishName":"菜品名","takeTimes":"30分钟"}}
 
 ### 3. 食材行
 每个食材单独输出一行：
@@ -14,7 +14,7 @@
 
 ### 5. 步骤行
 每个步骤单独输出一行：
-{"type":"step","data":{"step_number":1,"instruction":"具体动作"}}
+{"type":"step","data":{"stepNumber":1,"instruction":"具体动作"}}
 
 ### 6. 贴士行
 {"type":"tips","data":"制作建议"}

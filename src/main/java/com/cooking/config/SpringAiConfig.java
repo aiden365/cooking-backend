@@ -87,8 +87,8 @@ public class SpringAiConfig {
         builder.indexName(dishVectorStoreIndexName);
         builder.prefix(dishVectorStorePrefix);
         builder.metadataFields(
-                RedisVectorStore.MetadataField.tag("dishId"),
-                RedisVectorStore.MetadataField.tag("dishName")
+                RedisVectorStore.MetadataField.tag("dish_id"),
+                RedisVectorStore.MetadataField.tag("dish_name")
         );
         builder.batchingStrategy(new TokenCountBatchingStrategy());
 

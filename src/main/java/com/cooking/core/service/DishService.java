@@ -29,4 +29,6 @@ public interface DishService extends BaseService<DishEntity> {
     DishEntity saveAigcRecipe(AIRecipeDTO aiRecipeDTO);
 
     DishEntity saveDish(DishSaveDTO dishSaveDTO);
+
+    void saveDishToVectorStore(DishEntity dishEntity);
 }

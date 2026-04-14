@@ -75,7 +75,7 @@ public class AiResponseUtils {
             buffer.delete(0, deleteLength);
 
             if (!line.isEmpty() && isCompleteJsonObject(line)) {
-                sink.next(line);
+                sink.next(line + "\n");
             }
         }
     }

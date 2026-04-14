@@ -1,5 +1,6 @@
 package com.cooking.core.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseServiceImpl;
@@ -14,16 +15,19 @@ import com.cooking.core.service.DishService;
 import com.cooking.core.service.DishStepService;
 import com.cooking.dto.AIRecipeDTO;
 import com.cooking.dto.DishSaveDTO;
+import com.cooking.exceptions.OtherException;
+import jakarta.annotation.Resource;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -44,6 +48,8 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private DishFlavorService dishFlavorService;
     @Autowired
     private DishStepService dishStepService;
+    @Resource(name = "dishVectorStore")
+    private VectorStore dishVectorStore;
 
     @Override
     public List<DishEntity> findList(Map<String, Object> params) {
@@ -57,6 +63,32 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
     @Override
     public void deleteByIds(Set<String> ids) {
+
+    }
+
+    @Override
+    public void saveDishToVectorStore(DishEntity dishEntity) {
+
+        List<Document> existingDocuments = dishVectorStore.similaritySearch(SearchRequest.builder().query("").filterExpression(new FilterExpressionBuilder().eq("dish_id", dishEntity.getId().toString()).build()).build());
+        if (existingDocuments != null && !existingDocuments.isEmpty()){
+            List<String> idsToDelete = existingDocuments.stream().map(Document::getId).collect(Collectors.toList());
+            dishVectorStore.delete(idsToDelete);
+        }
+
+        /*List<DishMaterialEntity> materialEntityList = dishMaterialService.lambdaQuery().eq(DishMaterialEntity::getDishId, dishEntity.getId()).list();
+        StringBuilder sb = new StringBuilder();
+        sb.append(dishEntity.getName()).append(',');
+        sb.append(CollUtil.join(materialEntityList.stream().map(DishMaterialEntity::getMaterialName).collect(Collectors.toList()), ","));*/
+
+
+        try {
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("dish_id", dishEntity.getId());
+            metadata.put("dish_name", dishEntity.getName());
+            dishVectorStore.add(List.of(new Document(dishEntity.getId().toString(), dishEntity.getName().toString(), metadata)));
+        } catch (Exception e) {
+            throw new OtherException("保存向量数据库失败", e);
+        }
 
     }
 
@@ -85,9 +117,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         dishEntity.setImgPath(dishSaveDTO.getImgPath());
         super.saveOrUpdate(dishEntity);
 
-        List<DishFlavorEntity> existingFlavors = dishFlavorService.lambdaQuery()
-                .eq(DishFlavorEntity::getDishId, dishEntity.getId())
-                .list();
+        List<DishFlavorEntity> existingFlavors = dishFlavorService.lambdaQuery().eq(DishFlavorEntity::getDishId, dishEntity.getId()).list();
         Set<Long> retainFlavorIds = new HashSet<>();
         if (dishSaveDTO.getFlavors() != null) {
             for (DishSaveDTO.FlavorItem flavorItem : dishSaveDTO.getFlavors()) {
@@ -110,9 +140,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         }
         deleteRemovedFlavors(existingFlavors, retainFlavorIds);
 
-        List<DishMaterialEntity> existingMaterials = dishMaterialService.lambdaQuery()
-                .eq(DishMaterialEntity::getDishId, dishEntity.getId())
-                .list();
+        List<DishMaterialEntity> existingMaterials = dishMaterialService.lambdaQuery().eq(DishMaterialEntity::getDishId, dishEntity.getId()).list();
         Set<Long> retainMaterialIds = new HashSet<>();
         if (dishSaveDTO.getMaterials() != null) {
             for (DishSaveDTO.MaterialItem materialItem : dishSaveDTO.getMaterials()) {
@@ -136,9 +164,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         }
         deleteRemovedMaterials(existingMaterials, retainMaterialIds);
 
-        List<DishStepEntity> existingSteps = dishStepService.lambdaQuery()
-                .eq(DishStepEntity::getDishId, dishEntity.getId())
-                .list();
+        List<DishStepEntity> existingSteps = dishStepService.lambdaQuery().eq(DishStepEntity::getDishId, dishEntity.getId()).list();
         Set<Long> retainStepIds = new HashSet<>();
         if (dishSaveDTO.getSteps() != null) {
             for (DishSaveDTO.StepItem stepItem : dishSaveDTO.getSteps()) {
@@ -161,6 +187,8 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
             }
         }
         deleteRemovedSteps(existingSteps, retainStepIds);
+
+        this.saveDishToVectorStore(dishEntity);
 
         return dishEntity;
     }
@@ -238,41 +266,28 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
             dishStepService.saveBatch(steps);
         }
 
+        this.saveDishToVectorStore(dishEntity);
         return dishEntity;
     }
 
-    private String buildStepImages(String stepImage) {
-        if (!StringUtils.hasText(stepImage)) {
-            return "[]";
-        }
-        return "[\"" + stepImage.replace("\"", "\\\"") + "\"]";
-    }
+
 
     private void deleteRemovedFlavors(List<DishFlavorEntity> existingFlavors, Set<Long> retainFlavorIds) {
-        List<Long> removeIds = existingFlavors.stream()
-                .map(DishFlavorEntity::getId)
-                .filter(id -> !retainFlavorIds.contains(id))
-                .toList();
+        List<Long> removeIds = existingFlavors.stream().map(DishFlavorEntity::getId).filter(id -> !retainFlavorIds.contains(id)).toList();
         if (!removeIds.isEmpty()) {
             dishFlavorService.removeByIds(removeIds);
         }
     }
 
     private void deleteRemovedMaterials(List<DishMaterialEntity> existingMaterials, Set<Long> retainMaterialIds) {
-        List<Long> removeIds = existingMaterials.stream()
-                .map(DishMaterialEntity::getId)
-                .filter(id -> !retainMaterialIds.contains(id))
-                .toList();
+        List<Long> removeIds = existingMaterials.stream().map(DishMaterialEntity::getId).filter(id -> !retainMaterialIds.contains(id)).toList();
         if (!removeIds.isEmpty()) {
             dishMaterialService.removeByIds(removeIds);
         }
     }
 
     private void deleteRemovedSteps(List<DishStepEntity> existingSteps, Set<Long> retainStepIds) {
-        List<Long> removeIds = existingSteps.stream()
-                .map(DishStepEntity::getId)
-                .filter(id -> !retainStepIds.contains(id))
-                .toList();
+        List<Long> removeIds = existingSteps.stream().map(DishStepEntity::getId).filter(id -> !retainStepIds.contains(id)).toList();
         if (!removeIds.isEmpty()) {
             dishStepService.removeByIds(removeIds);
         }
