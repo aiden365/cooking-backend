@@ -10,5 +10,5 @@
 ### 3. 过去3天饮食记录 (Dietary History)
 {history}
 
-### 4. 当前偏好与身体状态 (Current Status)
-{status}
+### 4. 当前偏好与身体状态标签 (Current Status)
+{labels}

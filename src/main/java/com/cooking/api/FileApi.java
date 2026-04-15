@@ -38,10 +38,10 @@ public class FileApi extends BaseController {
      * @return
      */
     @PostMapping("/upload")
-    public BaseResponse upload(@RequestParam("file") MultipartFile file,@RequestParam("pathType") String pathType) {
+    public BaseResponse upload(@RequestParam("file") MultipartFile file,@RequestParam(value = "pathType", required = false) String pathType) {
 
         if (StrUtil.isBlank(pathType)) {
-            return fail("pathType 不能为空");
+            pathType = PathEnum.dish_img_path.toString();
         }
 
         PathEnum pathEnum = null;

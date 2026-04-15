@@ -207,16 +207,14 @@ public class UserIndividualDishApi extends BaseController {
 
     private Prompt buildPrompt(DishEntity dishEntity, List<LabelEntity> labels, List<DishMaterialEntity> materialList, List<DishFlavorEntity> flavorList, List<DishStepEntity> stepList) {
         String dishJsonLineString = null;
-        String aiFailJsonString = null;
 
         try {
             dishJsonLineString = dishJsonLine.getContentAsString(StandardCharsets.UTF_8);
-            aiFailJsonString = aiFailJson.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", aiFailJsonString));
+        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", JSONObject.of("type", "error","message", "错误原因")));
         Map<String, Object> userParams = new HashMap<>();
         userParams.put("dishName", dishEntity.getName());
         userParams.put("preferences", buildDietaryPreferenceText(labels));

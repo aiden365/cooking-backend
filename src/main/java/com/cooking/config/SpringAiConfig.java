@@ -67,7 +67,7 @@ public class SpringAiConfig {
 
     @Bean(name = "ollamaQwen")
     public ChatModel ollamaQwen(){
-        return OllamaChatModel.builder().ollamaApi(OllamaApi.builder().baseUrl(ollamaBaseUrl).build()).defaultOptions(OllamaChatOptions.builder().model(ollamaModel).build()).build();
+        return OllamaChatModel.builder().ollamaApi(OllamaApi.builder().baseUrl(ollamaBaseUrl).build()).defaultOptions(OllamaChatOptions.builder().model(ollamaModel).numCtx(1024).build()).build();
 
     }
     @Bean(name = "ollamaQwenEmbedding")

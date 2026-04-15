@@ -350,21 +350,19 @@ public class DishApi extends BaseController {
 
     public static void main(String[] args) {
 
-        System.out.println(JSONObject.of("type", "saved","data", JSONObject.of("dishId", 100L)).toJSONString());
+        System.out.println(JSONObject.of("type", "error","message", "错误原因"));
     }
 
     private Prompt buildPrompt(String dishName, String knowledgeContext) {
         String dishJsonLineString = null;
-        String aiFailJsonString = null;
 
         try {
             dishJsonLineString = dishJsonLine.getContentAsString(StandardCharsets.UTF_8);
-            aiFailJsonString = aiFailJson.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", aiFailJsonString));
+        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", JSONObject.of("type", "error","简短的几个字说明生成失败的原因", "错误原因")));
 
 
         PromptTemplate promptTemplate = new PromptTemplate(dishPrompt);

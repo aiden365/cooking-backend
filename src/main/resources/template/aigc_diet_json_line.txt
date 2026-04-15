@@ -2,13 +2,13 @@
 {"type":"start"}
 
 早餐输出：
-{"type":"meal","data":{"key":"breakfast","title":"早餐","name":"菜品名称","reason":"推荐理由","nutrients":"预估主要营养成分"}}
+{"type":"meal","data":{"key":"breakfast","title":"早餐","dishes":["菜品名称"],"reason":"推荐理由"}
 
 午餐输出：
-{"type":"meal","data":{"key":"lunch","title":"中餐","name":"菜品名称","reason":"推荐理由","nutrients":"预估主要营养成分"}}
+{"type":"meal","data":{"key":"lunch","title":"中餐","dishes":["菜品名称"],"reason":"推荐理由"}
 
 晚餐输出：
-{"type":"meal","data":{"key":"dinner","title":"晚餐","name":"菜品名称","reason":"推荐理由","nutrients":"预估主要营养成分"}}
+{"type":"meal","data":{"key":"dinner","title":"晚餐","dishes":["菜品名称"],"reason":"推荐理由"}
 
 饮食分析输出分析前：
 {"type":"analysis_start"}
@@ -17,7 +17,7 @@
 {"type":"analysis_content","content":"饮食分析内容片段"}
 
 饮食分析结束：
-{"type":"analysis_done","status":"饮食分析生成完成"}
+{"type":"analysis_done"}
 
 全部结束：
 {"type":"done"}

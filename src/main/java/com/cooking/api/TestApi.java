@@ -3,6 +3,7 @@ package com.cooking.api;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSONObject;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
 import com.cooking.utils.AiResponseUtils;
@@ -73,6 +74,10 @@ public class TestApi extends BaseController {
 
     @Value("classpath:/template/aigc_dish_json_line.txt")
     private org.springframework.core.io.Resource aigcDishJsonLine;
+
+    @Value("classpath:/template/aigc_diet_json_line.txt")
+    private org.springframework.core.io.Resource aigcDietJsonLine;
+
 
     @Value("classpath:/template/ai_success.json5")
     private org.springframework.core.io.Resource aiSuccessResource;
@@ -251,12 +256,10 @@ public class TestApi extends BaseController {
     @GetMapping("test62")
     public Flux<String> test62() {
 
-        String aigcDietSystemString;
-        String aiFailString;
+        String aigcDietJsonLineString;
 
         try {
-            aigcDietSystemString = aigcDietSystemPrompt.getContentAsString(StandardCharsets.UTF_8);
-            aiFailString = aiFailResource.getContentAsString(StandardCharsets.UTF_8);
+            aigcDietJsonLineString = aigcDietJsonLine.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -269,17 +272,16 @@ public class TestApi extends BaseController {
         String u3 = "[\"西红柿炒鸡蛋\", \"鸡蛋炒河粉\", \"青椒肉丝盖浇饭\",\"粉丝包\",\"糖醋排骨\",\"香菇青菜\"]";
         String u4 = "[\"感冒\", \"发烧\"]";
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(aigcDietSystemPrompt);
-        Message systemPromptTemplateMessage = systemPromptTemplate.createMessage(Map.of("aigcDietJsonLine", aigcDietSystemString, "aiFailJson", aiFailString));
-
+        Message systemPromptTemplateMessage = systemPromptTemplate.createMessage(Map.of("aigcDietJsonLine", aigcDietJsonLineString, "aiFailJson", JSONObject.of("type", "error","message", "错误原因").toJSONString()));
         PromptTemplate promptTemplate = new PromptTemplate(aigcDietUserPrompt);
-        Message message = promptTemplate.createMessage(Map.of("userInfo", u1,"goals", u2,"history", u3,"status", u4));
+        Message message = promptTemplate.createMessage(Map.of("userInfo", u1,"goals", u2,"history", u3,"labels", u4));
 
         Prompt prompt = Prompt.builder().messages(List.of(systemPromptTemplateMessage, message)).build();
 
         StringBuilder buffer = new StringBuilder();
         StringBuilder fullResponse = new StringBuilder();
 
-        Flux<String> lineFlux = qwenChatModel.stream(prompt.toString()).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
+        Flux<String> lineFlux = ollamaQwenChatModel.stream(prompt.toString()).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
 
         Flux<String> remainingFlux = Flux.defer(() -> {
             String lastLine = buffer.toString().trim();
@@ -295,6 +297,11 @@ public class TestApi extends BaseController {
 
         return lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line)).doOnComplete(() -> log.info("test41 AI full response:\n{}", fullResponse));
 
+    }
+
+    public static void main(String[] args) {
+
+        System.out.println(JSONObject.of("type", "error","message", "错误原因").toJSONString());
     }
 
     @GetMapping("test7")

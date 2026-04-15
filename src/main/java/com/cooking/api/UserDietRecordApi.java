@@ -1,5 +1,6 @@
 package com.cooking.api;
 
+import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -7,43 +8,38 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
-import com.cooking.core.entity.DishLabelRelEntity;
-import com.cooking.core.entity.DishEntity;
-import com.cooking.core.entity.LabelEntity;
-import com.cooking.core.entity.UserDishCollectEntity;
-import com.cooking.core.entity.UserDietRecordEntity;
-import com.cooking.core.entity.UserEntity;
-import com.cooking.core.entity.UserShareEntity;
-import com.cooking.core.service.DishLableRelService;
-import com.cooking.core.service.DishService;
-import com.cooking.core.service.LabelService;
-import com.cooking.core.service.UserDishCollectService;
-import com.cooking.core.service.UserDietRecordService;
-import com.cooking.core.service.UserShareService;
-import com.cooking.core.service.UserService;
+import com.cooking.core.entity.*;
+import com.cooking.core.service.*;
+import com.cooking.core.service.impl.NutritionServiceImpl;
+import com.cooking.core.service.impl.UserLabelRelServiceImpl;
 import com.cooking.exceptions.ApiException;
+import com.cooking.utils.AiResponseUtils;
 import com.cooking.utils.SystemContextHelper;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.SynchronousSink;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -54,6 +50,7 @@ import java.util.stream.Collectors;
  * @author aiden
  * @since 2026-02-03
  */
+@Slf4j
 @RestController
 @RequestMapping("diet")
 public class UserDietRecordApi extends BaseController {
@@ -74,6 +71,22 @@ public class UserDietRecordApi extends BaseController {
     private UserShareService userShareService;
     @Autowired
     private UserDishCollectService userDishCollectService;
+    @Value("classpath:/template/aigc_diet_system_prompt.md")
+    private org.springframework.core.io.Resource aigcDietSystemPrompt;
+    @Value("classpath:/template/aigc_diet_user_prompt.md")
+    private org.springframework.core.io.Resource aigcDietUserPrompt;
+
+    @Resource(name = "qwen")
+    private ChatModel chatModel;
+
+    @Value("classpath:/template/aigc_diet_json_line.txt")
+    private org.springframework.core.io.Resource aigcDietJsonLine;
+    @Autowired
+    private UserNutritionRelService userNutritionRelService;
+    @Autowired
+    private NutritionServiceImpl nutritionService;
+    @Autowired
+    private UserLabelRelServiceImpl userLabelRelService;
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
@@ -214,6 +227,220 @@ public class UserDietRecordApi extends BaseController {
         }
         userDietRecordService.removeById(dietId);
         return ok();
+    }
+
+    @PostMapping("aigc")
+    public Flux<String> aigc(@RequestBody JSONObject params) {
+        List<Long> labelIds = params.getList("labelIds", Long.class);
+        UserEntity currentUser = SystemContextHelper.getCurrentUser();
+        Long userId = currentUser.getId();
+
+        String aigcDietJsonLineString;
+
+        try {
+            aigcDietJsonLineString = aigcDietJsonLine.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        // 1. 查询用户基本信息 (u1)
+        UserEntity user = userService.getById(userId);
+        JSONObject userInfo = new JSONObject();
+        userInfo.put("性别", user.getGender() == 1 ? "男" : "女");
+        userInfo.put("年龄", user.getAge() != null ? user.getAge().toString() : "");
+        userInfo.put("身高", user.getStature() != null ? user.getStature().toString() : "");
+        userInfo.put("体重", user.getWeight() != null ? user.getWeight() + "kg" : "");
+
+
+        // 2. 查询用户营养目标 (u2)
+        List<UserNutritionRelEntity> nutritionRels = userNutritionRelService.lambdaQuery().eq(UserNutritionRelEntity::getUserId, userId).list();
+        Set<Long> nutritionIds = nutritionRels.stream().map(UserNutritionRelEntity::getNutritionId).collect(Collectors.toSet());
+        Map<Long, NutritionEntity> nutritionMap = nutritionService.findMapByIds(nutritionIds);
+        JSONObject nutritionGoals = new JSONObject();
+        nutritionRels.forEach(rel -> {
+            NutritionEntity nutrition = nutritionMap.get(rel.getNutritionId());
+            if (nutrition != null) {
+                nutritionGoals.put(nutrition.getName(), rel.getValue());
+            }
+        });
+
+        // 3. 查询用户饮食历史 (u3)
+        List<String> recentThreeDayList = this.recentThreeDays(userId);
+
+        // 4. 查询用户标签/健康状况
+        List<LabelEntity> labelEntityList = labelService.listByIds(new HashSet<>(labelIds));
+        String labelNames = CollUtil.join(labelEntityList.stream().map(LabelEntity::getLabelName).toList(), ",");
+
+        SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(aigcDietSystemPrompt);
+        Message systemPromptTemplateMessage = systemPromptTemplate.createMessage(Map.of("aigcDietJsonLine", aigcDietJsonLineString, "aiFailJson", JSONObject.of("type", "error","message", "错误原因").toJSONString()));
+        PromptTemplate promptTemplate = new PromptTemplate(aigcDietUserPrompt);
+        Message message = promptTemplate.createMessage(Map.of("userInfo", userInfo.toJSONString(),"goals", nutritionGoals.toJSONString(),"history", JSONObject.toJSONString(recentThreeDayList),"labels", labelNames));
+
+        Prompt prompt = Prompt.builder().messages(List.of(systemPromptTemplateMessage, message)).build();
+
+        StringBuilder buffer = new StringBuilder();
+        StringBuilder fullResponse = new StringBuilder();
+
+        Flux<String> lineFlux = chatModel.stream(prompt.toString()).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
+
+        Flux<String> remainingFlux = Flux.defer(() -> {
+            String lastLine = buffer.toString().trim();
+            if (lastLine.isEmpty()) {
+                return Flux.empty();
+            }
+            if (AiResponseUtils.isCompleteJsonObject(lastLine)) {
+                buffer.setLength(0);
+                return Flux.just(lastLine);
+            }
+            return Flux.empty();
+        });
+
+        return lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line)).doOnComplete(() -> log.info("test41 AI full response:\n{}", fullResponse));
+
+    }
+
+
+    public List<String> recentThreeDays(Long userId){
+        List<String> dishNames = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        LocalDate threeDaysAgo = today.minusDays(2);
+
+        List<UserDietRecordEntity> recordList = userDietRecordService.lambdaQuery().eq(UserDietRecordEntity::getUserId, userId).ge(UserDietRecordEntity::getDietDate, threeDaysAgo.format(DATE_FORMATTER)).le(UserDietRecordEntity::getDietDate, today.format(DATE_FORMATTER)).orderByDesc(UserDietRecordEntity::getDietDate).orderByAsc(UserDietRecordEntity::getDietOrder).list();
+        if (recordList.isEmpty()) {
+            return dishNames;
+        }
+
+        List<Long> dishIds = recordList.stream().map(UserDietRecordEntity::getDishId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, DishEntity> dishMap = dishService.findMapByIds(Set.copyOf(dishIds));
+
+
+        for (UserDietRecordEntity userDietRecordEntity : recordList) {
+            DishEntity dishEntity = dishMap.get(userDietRecordEntity.getDishId());
+            if(dishEntity == null){
+                continue;
+            }
+            dishNames.add(dishEntity.getName());
+        }
+
+        return dishNames;
+    }
+
+    public List<Map<String, Object>> recentThreeDays2(Long userId) {
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        LocalDate today = LocalDate.now();
+        LocalDate threeDaysAgo = today.minusDays(2);
+
+        List<UserDietRecordEntity> recordList = userDietRecordService.lambdaQuery().eq(UserDietRecordEntity::getUserId, userId).ge(UserDietRecordEntity::getDietDate, threeDaysAgo.format(DATE_FORMATTER)).le(UserDietRecordEntity::getDietDate, today.format(DATE_FORMATTER)).orderByDesc(UserDietRecordEntity::getDietDate).orderByAsc(UserDietRecordEntity::getDietOrder).list();
+        if (recordList.isEmpty()) {
+            return result;
+        }
+
+        List<Long> dishIds = recordList.stream().map(UserDietRecordEntity::getDishId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, DishEntity> dishMap = dishService.findMapByIds(Set.copyOf(dishIds));
+
+        Map<Long, DishLabelRelEntity> dishLabelRelMap = dishLableRelService.findMapByField(DishLabelRelEntity.Fields.dishId, dishIds);
+        Map<Long, LabelEntity> labelMap = labelService.findMapByIds(dishLabelRelMap.values().stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet()));
+        dishLabelRelMap.values().forEach(rel -> {
+            LabelEntity labelEntity = labelMap.get(rel.getLabelId());
+            if (labelEntity != null) {
+                rel.setLabelName(labelEntity.getLabelName());
+            }
+        });
+
+        Map<Long, Long> shareCountMap = userShareService.lambdaQuery().in(UserShareEntity::getDishId, dishIds).list().stream().collect(Collectors.groupingBy(UserShareEntity::getDishId, Collectors.counting()));
+        Map<Long, Long> collectCountMap = userDishCollectService.lambdaQuery().in(UserDishCollectEntity::getDishId, dishIds).list().stream().collect(Collectors.groupingBy(UserDishCollectEntity::getDishId, Collectors.counting()));
+
+        Map<String, List<UserDietRecordEntity>> dateGroupMap = recordList.stream().collect(Collectors.groupingBy(UserDietRecordEntity::getDietDate, LinkedHashMap::new, Collectors.toList()));
+
+
+        for (int i = 0; i < 3; i++) {
+            LocalDate targetDate = today.minusDays(i);
+            String dateStr = targetDate.format(DATE_FORMATTER);
+            String dayLabel = getDayLabel(targetDate);
+
+            List<UserDietRecordEntity> dayRecords = dateGroupMap.getOrDefault(dateStr, Collections.emptyList());
+            Map<Integer, List<UserDietRecordEntity>> orderGroupMap = dayRecords.stream().collect(Collectors.groupingBy(UserDietRecordEntity::getDietOrder));
+
+            List<Map<String, Object>> meals = new ArrayList<>();
+            meals.add(createMealGroup(1, "breakfast", "早餐", orderGroupMap, dishMap, dishLabelRelMap, shareCountMap, collectCountMap));
+            meals.add(createMealGroup(2, "lunch", "午餐", orderGroupMap, dishMap, dishLabelRelMap, shareCountMap, collectCountMap));
+            meals.add(createMealGroup(3, "dinner", "晚餐", orderGroupMap, dishMap, dishLabelRelMap, shareCountMap, collectCountMap));
+
+            Map<String, Object> dayData = new LinkedHashMap<>();
+            dayData.put("date", dateStr);
+            dayData.put("dayLabel", dayLabel);
+            dayData.put("meals", meals);
+            result.add(dayData);
+        }
+
+        return result;
+    }
+
+
+    private Map<String, Object> createMealGroup(Integer order, String key, String label,
+                                                Map<Integer, List<UserDietRecordEntity>> orderGroupMap,
+                                                Map<Long, DishEntity> dishMap,
+                                                Map<Long, DishLabelRelEntity> dishLabelRelMap,
+                                                Map<Long, Long> shareCountMap,
+                                                Map<Long, Long> collectCountMap) {
+        List<Map<String, Object>> dishes = orderGroupMap.getOrDefault(order, Collections.emptyList()).stream()
+                .map(record -> buildDietDish(record, dishMap, dishLabelRelMap, shareCountMap, collectCountMap))
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(item -> Long.parseLong(item.get("id").toString())))
+                .toList();
+
+        Map<String, Object> meal = new LinkedHashMap<>();
+        meal.put("order", order);
+        meal.put("key", key);
+        meal.put("label", label);
+        meal.put("dishes", dishes);
+        return meal;
+    }
+
+    private List<Map<String, Object>> buildEmptyThreeDaysResult() {
+        LocalDate today = LocalDate.now();
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (int i = 0; i < 3; i++) {
+            LocalDate targetDate = today.minusDays(i);
+            String dateStr = targetDate.format(DATE_FORMATTER);
+            String dayLabel = getDayLabel(targetDate);
+
+            List<Map<String, Object>> meals = new ArrayList<>();
+            meals.add(createEmptyMealGroup(1, "breakfast", "早餐"));
+            meals.add(createEmptyMealGroup(2, "lunch", "午餐"));
+            meals.add(createEmptyMealGroup(3, "dinner", "晚餐"));
+
+            Map<String, Object> dayData = new LinkedHashMap<>();
+            dayData.put("date", dateStr);
+            dayData.put("dayLabel", dayLabel);
+            dayData.put("meals", meals);
+            result.add(dayData);
+        }
+
+        return result;
+    }
+
+    private Map<String, Object> createEmptyMealGroup(Integer order, String key, String label) {
+        Map<String, Object> meal = new LinkedHashMap<>();
+        meal.put("order", order);
+        meal.put("key", key);
+        meal.put("label", label);
+        meal.put("dishes", new ArrayList<>());
+        return meal;
+    }
+
+    private String getDayLabel(LocalDate date) {
+        LocalDate today = LocalDate.now();
+        if (date.equals(today)) {
+            return "今天";
+        } else if (date.equals(today.minusDays(1))) {
+            return "昨天";
+        } else {
+            return date.getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.CHINESE);
+        }
     }
 
 
