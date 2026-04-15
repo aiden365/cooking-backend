@@ -5,6 +5,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
+import com.cooking.utils.AiResponseUtils;
 import com.cooking.utils.EmailUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -54,26 +55,28 @@ public class TestApi extends BaseController {
     @Resource(name = "ollamaQwenClient")
     private ChatClient ollamaQwenClient;
 
-    @Value("classpath:/template/dish_prompt.md")
+    @Value("classpath:/template/aigc_dish_prompt.md")
     private org.springframework.core.io.Resource userTemplate;
-    @Value("classpath:/template/dish_individual_prompt.md")
+    @Value("classpath:/template/aigc_individual_prompt.md")
     private org.springframework.core.io.Resource user1Template;
 
-    @Value("classpath:/template/system_prompt.md")
+    @Value("classpath:/template/aigc_dish_system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
 
     @Value("classpath:/template/test_promot1.txt")
     private org.springframework.core.io.Resource testPromot1;
 
-    @Value("classpath:/template/111.md")
-    private org.springframework.core.io.Resource prompt111;
-    @Value("classpath:/template/222.md")
-    private org.springframework.core.io.Resource prompt222;
+    @Value("classpath:/template/aigc_diet_system_prompt.md")
+    private org.springframework.core.io.Resource aigcDietSystemPrompt;
+    @Value("classpath:/template/aigc_diet_user_prompt.md")
+    private org.springframework.core.io.Resource aigcDietUserPrompt;
 
+    @Value("classpath:/template/aigc_dish_json_line.txt")
+    private org.springframework.core.io.Resource aigcDishJsonLine;
 
     @Value("classpath:/template/ai_success.json5")
     private org.springframework.core.io.Resource aiSuccessResource;
-    @Value("classpath:/template/ai_fail.json5")
+    @Value("classpath:/template/aigc_fail.json5")
     private org.springframework.core.io.Resource aiFailResource;
     @Resource(name = "qwenEmbedding")
     private EmbeddingModel qwenEmbedding;
@@ -248,15 +251,16 @@ public class TestApi extends BaseController {
     @GetMapping("test62")
     public Flux<String> test62() {
 
-        String formatSuccess;
-        String formatFail;
-        try (InputStream successIns = aiSuccessResource.getInputStream();
-             InputStream failIns = aiFailResource.getInputStream();){
-            formatSuccess = IoUtil.read(successIns, StandardCharsets.UTF_8);
-            formatFail = IoUtil.read(failIns, StandardCharsets.UTF_8);
+        String aigcDietSystemString;
+        String aiFailString;
+
+        try {
+            aigcDietSystemString = aigcDietSystemPrompt.getContentAsString(StandardCharsets.UTF_8);
+            aiFailString = aiFailResource.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
 
         String aa = "{\"status\":\"success/error\",\"daily_analysis\":\"简述今日配餐的营养逻辑，特别是针对当前身体状态的调整说明\",\"meals\":{\"breakfast\":{\"name\":\"菜品名称\",\"reason\":\"推荐理由（结合营养目标或身体状态）\",\"nutrients\":\"预估主要营养成分（碳水/蛋白质/热量）\"},\"lunch\":{\"name\":\"菜品名称\",\"reason\":\"推荐理由\",\"nutrients\":\"预估主要营养成分\"},\"dinner\":{\"name\":\"菜品名称\",\"reason\":\"推荐理由\",\"nutrients\":\"预估主要营养成分\"}},\"error_analysis\":\"\"}";
 
@@ -264,14 +268,32 @@ public class TestApi extends BaseController {
         String u2 = "{\"蛋白质\":\"75g\",\"碳水化合物\":\"275g\",\"脂肪\":\"67g\"}";
         String u3 = "[\"西红柿炒鸡蛋\", \"鸡蛋炒河粉\", \"青椒肉丝盖浇饭\",\"粉丝包\",\"糖醋排骨\",\"香菇青菜\"]";
         String u4 = "[\"感冒\", \"发烧\"]";
-        SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(prompt111);
-        Message systemPromptTemplateMessage = systemPromptTemplate.createMessage(Map.of("format_success", aa));
+        SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(aigcDietSystemPrompt);
+        Message systemPromptTemplateMessage = systemPromptTemplate.createMessage(Map.of("aigcDietJsonLine", aigcDietSystemString, "aiFailJson", aiFailString));
 
-        PromptTemplate promptTemplate = new PromptTemplate(prompt222);
+        PromptTemplate promptTemplate = new PromptTemplate(aigcDietUserPrompt);
         Message message = promptTemplate.createMessage(Map.of("userInfo", u1,"goals", u2,"history", u3,"status", u4));
 
         Prompt prompt = Prompt.builder().messages(List.of(systemPromptTemplateMessage, message)).build();
-        return qwenChatModel.stream(prompt.toString());
+
+        StringBuilder buffer = new StringBuilder();
+        StringBuilder fullResponse = new StringBuilder();
+
+        Flux<String> lineFlux = qwenChatModel.stream(prompt.toString()).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
+
+        Flux<String> remainingFlux = Flux.defer(() -> {
+            String lastLine = buffer.toString().trim();
+            if (lastLine.isEmpty()) {
+                return Flux.empty();
+            }
+            if (AiResponseUtils.isCompleteJsonObject(lastLine)) {
+                buffer.setLength(0);
+                return Flux.just(lastLine);
+            }
+            return Flux.empty();
+        });
+
+        return lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line)).doOnComplete(() -> log.info("test41 AI full response:\n{}", fullResponse));
 
     }
 

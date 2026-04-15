@@ -1,7 +1,6 @@
 package com.cooking.api;
 
 import cn.hutool.core.util.StrUtil;
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -37,13 +36,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -98,13 +97,13 @@ public class DishApi extends BaseController {
     @Resource(name = "repositoryVectorStore")
     private VectorStore repositoryVectorStore;
 
-    @Value("classpath:/template/dish_prompt.md")
+    @Value("classpath:/template/aigc_dish_prompt.md")
     private org.springframework.core.io.Resource dishPrompt;
-    @Value("classpath:/template/system_prompt.md")
+    @Value("classpath:/template/aigc_dish_system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
-    @Value("classpath:/template/dish_json_line.txt")
+    @Value("classpath:/template/aigc_dish_json_line.txt")
     private org.springframework.core.io.Resource dishJsonLine;
-    @Value("classpath:/template/ai_fail.json5")
+    @Value("classpath:/template/aigc_fail.json5")
     private org.springframework.core.io.Resource aiFailJson;
 
 
@@ -302,7 +301,7 @@ public class DishApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "dishName不能为空");
         }
 
-        Consumer<StringBuilder> complete = (aiFullResponse) -> {
+        return callAi(dishName, aiFullResponse -> {
             AIRecipeDTO aiRecipeDTO = AIRecipeDTO.parseAiRecipe(aiFullResponse.toString());
             if ("error".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
                 throw new ApiException(BaseResponse.Code.fail.code, aiRecipeDTO.getMessage());
@@ -312,13 +311,12 @@ public class DishApi extends BaseController {
             }
 
             // AI调用在事务外，避免慢调用占用事务。
-            dishService.saveAigcRecipe(aiRecipeDTO);
-        };
-
-        return callAi(dishName, complete);
+            DishEntity dishEntity = dishService.saveAigcRecipe(aiRecipeDTO);
+            return buildSavedMessage(dishEntity.getId());
+        });
     }
 
-    private Flux<String> callAi(String dishName, Consumer<StringBuilder> complete) {
+    private Flux<String> callAi(String dishName, java.util.function.Function<StringBuilder, String> complete) {
         Prompt prompt = buildPrompt(dishName, null);
 
         StringBuilder buffer = new StringBuilder();
@@ -338,8 +336,21 @@ public class DishApi extends BaseController {
             return Flux.empty();
         });
 
-        return lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line)).doOnComplete(() -> complete.accept(fullResponse));
+        Flux<String> responseFlux = lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line));
 
+        Mono<String> savedFlux = Mono.fromCallable(() -> complete.apply(fullResponse)).filter(StringUtils::hasText);
+
+        return responseFlux.concatWith(savedFlux);
+
+    }
+
+    private String buildSavedMessage(Long dishId) {
+        return JSONObject.of("type", "saved","data", JSONObject.of("dishId", dishId)).toJSONString();
+    }
+
+    public static void main(String[] args) {
+
+        System.out.println(JSONObject.of("type", "saved","data", JSONObject.of("dishId", 100L)).toJSONString());
     }
 
     private Prompt buildPrompt(String dishName, String knowledgeContext) {
@@ -424,48 +435,6 @@ public class DishApi extends BaseController {
         }
     }
 
-    private AIRecipeDTO parseAiRecipe(String aiText) {
-        String jsonText = extractJsonText(aiText);
-        JSONObject root;
-        try {
-            root = JSONObject.parseObject(jsonText);
-        } catch (Exception e) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI返回结果无法解析");
-        }
-
-        AIRecipeDTO dto = new AIRecipeDTO();
-        dto.setStatus(root.getString("status"));
-        dto.setDishName(root.getString("dish_name"));
-        dto.setTakeTimes(root.getString("take_times"));
-        dto.setTips(root.getString("tips"));
-        dto.setMessage(root.getString("message"));
-
-        JSONArray materials = root.getJSONArray("materials");
-        if (materials != null) {
-            dto.setMaterials(materials.toJavaList(AIRecipeDTO.Materials.class));
-        }
-        JSONArray flavors = root.getJSONArray("flavors");
-        if (flavors != null) {
-            dto.setFlavors(flavors.toJavaList(AIRecipeDTO.Flavors.class));
-        }
-        JSONArray steps = root.getJSONArray("steps");
-        if (steps != null) {
-            dto.setSteps(steps.toJavaList(AIRecipeDTO.Steps.class));
-        }
-        return dto;
-    }
-
-    private String extractJsonText(String aiText) {
-        if (!StringUtils.hasText(aiText)) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI返回为空");
-        }
-        int start = aiText.indexOf('{');
-        int end = aiText.lastIndexOf('}');
-        if (start < 0 || end <= start) {
-            throw new ApiException(BaseResponse.Code.fail.code, "AI返回格式不正确");
-        }
-        return aiText.substring(start, end + 1);
-    }
 
 
     @PostMapping("saveLabels")

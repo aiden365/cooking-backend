@@ -74,13 +74,13 @@ public class UserIndividualDishApi extends BaseController {
     @Resource(name = "ollamaQwen")
     private ChatModel ollamaQwen;
 
-    @Value("classpath:/template/dish_individual_prompt.md")
+    @Value("classpath:/template/aigc_individual_prompt.md")
     private org.springframework.core.io.Resource userIndividualPrompt;
-    @Value("classpath:/template/system_prompt.md")
+    @Value("classpath:/template/aigc_dish_system_prompt.md")
     private org.springframework.core.io.Resource systemPrompt;
-    @Value("classpath:/template/dish_json_line.txt")
+    @Value("classpath:/template/aigc_dish_json_line.txt")
     private org.springframework.core.io.Resource dishJsonLine;
-    @Value("classpath:/template/ai_fail.json5")
+    @Value("classpath:/template/aigc_fail.json5")
     private org.springframework.core.io.Resource aiFailJson;
 
 
