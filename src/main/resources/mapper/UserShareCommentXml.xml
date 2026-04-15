@@ -10,6 +10,9 @@
         <if test="params.userShareId != null">
             and user_share_id = #{params.userShareId}
         </if>
+        <if test="params.shareId != null">
+            and user_share_id = #{params.shareId}
+        </if>
         <if test="params.parentId != null">
             and parent_id = #{params.parentId}
         </if>

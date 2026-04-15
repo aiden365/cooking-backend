@@ -207,13 +207,21 @@ public class UserDietRecordApi extends BaseController {
         validateParams(userId, dishId, dietDate, dietOrder);
 
         LambdaQueryWrapper<UserDietRecordEntity> wrapper = new LambdaQueryWrapper<UserDietRecordEntity>().eq(UserDietRecordEntity::getUserId, userId).eq(UserDietRecordEntity::getDietDate, dietDate).eq(UserDietRecordEntity::getDietOrder, dietOrder);
-        UserDietRecordEntity entity = userDietRecordService.getOne(wrapper);
-        if (entity == null) {
-            entity = new UserDietRecordEntity();
-            entity.setUserId(userId);
-            entity.setDietDate(dietDate);
-            entity.setDietOrder(dietOrder);
+        long count = userDietRecordService.count(wrapper);
+        if(count >= 3){
+            throw new ApiException(BaseResponse.Code.fail.code, "该时间段已添加三道菜，请合理规划饮食");
         }
+
+        LambdaQueryWrapper<UserDietRecordEntity> wrapper1 = wrapper.eq(UserDietRecordEntity::getDishId, dishId);
+        long count1 = userDietRecordService.count(wrapper1);
+        if(count1 > 0){
+            throw new ApiException(BaseResponse.Code.fail.code, "该时间段已添加该菜，请勿重复添加");
+        }
+
+        UserDietRecordEntity entity = new UserDietRecordEntity();
+        entity.setUserId(userId);
+        entity.setDietDate(dietDate);
+        entity.setDietOrder(dietOrder);
         entity.setDishId(dishId);
         userDietRecordService.saveOrUpdate(entity);
         return ok(entity);

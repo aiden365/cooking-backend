@@ -70,9 +70,7 @@ public class UserIndividualDishApi extends BaseController {
     @Autowired
     private LabelService labelService;
     @Resource(name = "qwen")
-    private ChatModel qwenChatModel;
-    @Resource(name = "ollamaQwen")
-    private ChatModel ollamaQwen;
+    private ChatModel chatModel;
 
     @Value("classpath:/template/aigc_individual_prompt.md")
     private org.springframework.core.io.Resource userIndividualPrompt;
@@ -185,7 +183,7 @@ public class UserIndividualDishApi extends BaseController {
         StringBuilder buffer = new StringBuilder();
         StringBuilder fullResponse = new StringBuilder();
 
-        Flux<String> lineFlux = ollamaQwen.stream(prompt).map(AiResponseUtils::extractChunkText).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
+        Flux<String> lineFlux = chatModel.stream(prompt).map(AiResponseUtils::extractChunkText).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
 
         Flux<String> remainingFlux = Flux.defer(() -> {
             String lastLine = buffer.toString().trim();

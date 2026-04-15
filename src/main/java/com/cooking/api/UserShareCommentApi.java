@@ -5,16 +5,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cooking.base.BaseController;
+import com.cooking.base.BaseEntity;
 import com.cooking.base.BaseResponse;
-import com.cooking.core.entity.DishEntity;
-import com.cooking.core.entity.UserEntity;
-import com.cooking.core.entity.UserShareCommentEntity;
-import com.cooking.core.entity.UserShareEntity;
+import com.cooking.core.entity.*;
 import com.cooking.core.service.DishService;
 import com.cooking.core.service.UserService;
 import com.cooking.core.service.UserShareCommentService;
 import com.cooking.core.service.UserShareService;
 import com.cooking.exceptions.ApiException;
+import com.cooking.utils.SystemContextHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -51,25 +52,33 @@ public class UserShareCommentApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-        String search = params.getString("search");
-        Long userShareId = params.getLong("userShareId");
-        Long userId = params.getLong("userId");
-        Long parentId = params.getLong("parentId");
-
-        Map<String, Object> queryParams = new HashMap<>();
-        queryParams.put("search", search);
-        queryParams.put("userShareId", userShareId);
-        queryParams.put("userId", userId);
-        queryParams.put("parentId", parentId);
-
-        IPage<UserShareCommentEntity> entityIPage = userShareCommentService.findPage(new Page<>(pageNo, pageSize), queryParams);
-        Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityIPage.getRecords().stream().map(UserShareCommentEntity::getUserId).collect(Collectors.toSet()));
-        entityIPage.getRecords().forEach(e -> {
-            UserEntity userEntity = userEntityMap.get(e.getUserId());
-            e.setUserName(userEntity == null ? "" : userEntity.getUserName());
-        });
-
+        IPage<UserShareCommentEntity> entityIPage = query(new Page<>(pageNo, pageSize), params);
         return ok(entityIPage);
+    }
+
+    @PostMapping("list")
+    public BaseResponse list(@RequestBody JSONObject params) {
+        return ok(query(new Page<>(1, -1), params).getRecords());
+    }
+
+    private IPage<UserShareCommentEntity> query(IPage<UserShareCommentEntity> page, Map<String, Object> params){
+        params.putIfAbsent("parentId", 0L);
+
+        IPage<UserShareCommentEntity> entityIPage = userShareCommentService.findPage(page, params);
+        //获取分享的子评论
+        Set<Long> commentIds = entityIPage.getRecords().stream().map(BaseEntity::getId).collect(Collectors.toSet());
+        List<UserShareCommentEntity> childCommentList = userShareCommentService.lambdaQuery().in(UserShareCommentEntity::getParentId, commentIds).list();
+        Map<Long, List<UserShareCommentEntity>> childCommentListMap = childCommentList.stream().collect(Collectors.groupingBy(UserShareCommentEntity::getParentId));
+
+        Set<Long> entityUserIds = entityIPage.getRecords().stream().map(UserShareCommentEntity::getUserId).collect(Collectors.toSet());
+        entityUserIds.addAll(childCommentList.stream().map(UserShareCommentEntity::getUserId).collect(Collectors.toSet()));
+        Map<Long, UserEntity> userEntityMap = userService.findMapByIds(entityUserIds);
+        entityIPage.getRecords().forEach(e -> e.setUserName(userEntityMap.get(e.getUserId()).getUserName()));
+        childCommentList.forEach(e -> e.setUserName(userEntityMap.get(e.getUserId()).getUserName()));
+
+        entityIPage.getRecords().forEach(e -> e.setChildCommentList(childCommentListMap.get(e.getId())));
+
+        return entityIPage;
     }
 
     @PostMapping("add")
@@ -80,6 +89,11 @@ public class UserShareCommentApi extends BaseController {
         Long shareId = params.getLong("shareId");
         if (parentId == null) {
             parentId = 0L;
+        }
+
+        if(userId == null){
+            UserEntity currentUser = SystemContextHelper.getCurrentUser();
+            userId = currentUser.getId();
         }
 
         UserEntity userEntity = validateUser(userId);
@@ -104,12 +118,12 @@ public class UserShareCommentApi extends BaseController {
 
     @PostMapping("delete")
     public BaseResponse delete(@RequestBody JSONObject params) {
-        Long id = params.getLong("id");
-        if (id == null) {
+        Long commentId = params.getLong("commentId");
+        if (commentId == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }
 
-        userShareCommentService.removeById(id);
+        userShareCommentService.removeById(commentId);
         return ok();
     }
 
