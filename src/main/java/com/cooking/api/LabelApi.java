@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -52,6 +53,7 @@ public class LabelApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
+        List<LabelEntity> list = labelService.query().list();
         IPage<LabelEntity> entityIPage = labelService.findPage(new Page<>(pageNo, pageSize), params);
         return ok(entityIPage);
     }
