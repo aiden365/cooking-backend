@@ -54,7 +54,7 @@ public class LabelApi extends BaseController {
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
-
+        List<LabelEntity> list = labelService.lambdaQuery().list();
         IPage<LabelEntity> entityIPage = labelService.findPage(new Page<>(pageNo, pageSize), params);
         return ok(entityIPage);
     }

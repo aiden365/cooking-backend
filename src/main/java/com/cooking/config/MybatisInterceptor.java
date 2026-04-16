@@ -33,9 +33,8 @@ import java.util.Properties;
  * 公共SQL拦截器，对SQL进行一些公共的处理
  */
 @Slf4j
-@Component
-@Intercepts({
-        @Signature(type = StatementHandler.class, method = "prepare", args = { Connection.class, Integer.class }) })
+//@Component
+@Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = { Connection.class, Integer.class }) })
 public class MybatisInterceptor implements Interceptor {
 
     @Override
