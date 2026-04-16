@@ -1,5 +1,6 @@
 package com.cooking.api;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -435,29 +436,55 @@ public class DishApi extends BaseController {
 
 
 
-    @PostMapping("saveLabels")
-    public BaseResponse saveLabels(@RequestBody JSONObject params) {
+    @PostMapping("addLabel")
+    public BaseResponse addLabel(@RequestBody JSONObject params) {
         Long dishId = params.getLong("dishId");
-        List<Long> labelIds = params.getList("labels", Long.class);
+        Long labelId = params.getLong("labelId");
 
         if (dishId == null) {
             return fail("dishId不能为空");
         }
 
-        long currentLabelCount = dishLableRelService.count(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId));
-        Set<Long> existingLabelIds = dishLableRelService.list(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId)).stream().map(DishLabelRelEntity::getLabelId).collect(Collectors.toSet());
-
-        Set<Long> newLabelIds = (labelIds == null) ? Collections.emptySet() : new HashSet<>(labelIds);
-
-        long toAddCount = newLabelIds.stream().filter(id -> !existingLabelIds.contains(id)).count();
-        long toDeleteCount = existingLabelIds.stream().filter(id -> !newLabelIds.contains(id)).count();
-
-        if (currentLabelCount + toAddCount - toDeleteCount > 5) {
-            return fail("菜品标签总数不能超过5个");
+        if (labelId == null) {
+            return fail("标签不能为空");
         }
 
-        dishLableRelService.saveDishLabels(dishId, labelIds);
+        DishLabelRelEntity dishLabelRelEntity = dishLableRelService.lambdaQuery().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLabelId, labelId).list().stream().findAny().orElse(null);
+        if (dishLabelRelEntity != null) {
+            return fail("该标签已选择");
+        }
 
+        long currentLabelCount = dishLableRelService.count(new LambdaQueryWrapper<DishLabelRelEntity>().eq(DishLabelRelEntity::getDishId, dishId));
+        if (currentLabelCount > 4) {
+            return fail("菜品标签总数不能超过4个");
+        }
+
+
+
+        DishLabelRelEntity build = DishLabelRelEntity.builder().dishId(dishId).labelId(labelId).build();
+        dishLableRelService.save(build);
+        return ok("用户标签保存成功");
+    }
+
+
+    @PostMapping("delLabel")
+    public BaseResponse delLabel(@RequestBody JSONObject params) {
+        Long dishId = params.getLong("dishId");
+        Long labelId = params.getLong("labelId");
+
+        if (dishId == null) {
+            return fail("dishId不能为空");
+        }
+
+        if (labelId == null) {
+            return fail("标签不能为空");
+        }
+
+        DishLabelRelEntity dishLabelRelEntity = dishLableRelService.lambdaQuery().eq(DishLabelRelEntity::getDishId, dishId).eq(DishLabelRelEntity::getLabelId, labelId).list().stream().findAny().orElse(null);
+        if (dishLabelRelEntity == null) {
+            return ok();
+        }
+        dishLableRelService.removeById(dishLabelRelEntity.getId());
         return ok("用户标签保存成功");
     }
 }

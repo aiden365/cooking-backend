@@ -16,6 +16,19 @@
         <if test="params.userId != null">
             and exists(select 1 from tbl_user_lable_rel where tbl_user_lable_rel.label_id = tbl_label.id and tbl_user_lable_rel.user_id = #{params.userId})
         </if>
+        <if test="params.labelIds != null and params.labelIds.size() > 0">
+            and id in
+            <foreach item="item" collection="params.labelIds" separator="," open="(" close=")" index="">
+                #{item}
+            </foreach>
+        </if>
+
+        <if test="params.excludeLabelIds != null and params.excludeLabelIds.size() > 0">
+            and id not in
+            <foreach item="item" collection="params.excludeLabelIds" separator="," open="(" close=")" index="">
+                #{item}
+            </foreach>
+        </if>
 
         order by create_time desc
     </select>

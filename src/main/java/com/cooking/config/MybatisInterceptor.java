@@ -59,7 +59,7 @@ public class MybatisInterceptor implements Interceptor {
             finalSql = finalSql.replaceAll("(?i)IN\\s*\\(\\s*\\)", "IN ('-1')");
 
             // 2. 解析 SQL，自动为查询、子查询、关联查询添加逻辑删除条件 deleted = 0
-            finalSql = addDeletedCondition(finalSql);
+            /*finalSql = addDeletedCondition(finalSql);*/
 
         } catch (Exception e) {
             log.error("公共SQL拦截器，处理SQL失败", e);

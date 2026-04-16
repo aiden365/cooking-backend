@@ -55,15 +55,7 @@ public class LabelApi extends BaseController {
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
 
-        String search = params.getString("search");
-        String labelName = params.getString("labelName");
-        Integer type = params.getInteger("type");
-        HashMap<String, Object> queryParams = new HashMap<>();
-        queryParams.put("labelName", labelName);
-        queryParams.put("type", type.toString());
-        queryParams.put("search", search);
-
-        IPage<LabelEntity> entityIPage = labelService.findPage(new Page<>(pageNo, pageSize), queryParams);
+        IPage<LabelEntity> entityIPage = labelService.findPage(new Page<>(pageNo, pageSize), params);
         return ok(entityIPage);
     }
 
