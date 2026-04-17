@@ -3,6 +3,8 @@ package com.cooking.api;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.dashscope.spec.DashScopeApiSpec;
 import com.alibaba.fastjson2.JSONObject;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
@@ -92,7 +94,6 @@ public class TestApi extends BaseController {
     EmailUtils emailUtils;
     @Autowired
     private DishService dishService;
-
 
 
     @GetMapping("test1")

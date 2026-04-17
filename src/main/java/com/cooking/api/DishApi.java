@@ -44,6 +44,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -302,7 +304,7 @@ public class DishApi extends BaseController {
             throw new ApiException(BaseResponse.Code.fail.code, "dishName不能为空");
         }
 
-        return callAi(dishName, aiFullResponse -> {
+        Function<StringBuilder, String> complete = (aiFullResponse) -> {
             AIRecipeDTO aiRecipeDTO = AIRecipeDTO.parseAiRecipe(aiFullResponse.toString());
             if ("error".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
                 throw new ApiException(BaseResponse.Code.fail.code, aiRecipeDTO.getMessage());
@@ -310,11 +312,12 @@ public class DishApi extends BaseController {
             if (!"success".equalsIgnoreCase(aiRecipeDTO.getStatus())) {
                 throw new ApiException(BaseResponse.Code.fail.code, "AI生成失败");
             }
-
             // AI调用在事务外，避免慢调用占用事务。
             DishEntity dishEntity = dishService.saveAigcRecipe(aiRecipeDTO);
             return buildSavedMessage(dishEntity.getId());
-        });
+        };
+
+        return callAi(dishName, complete);
     }
 
     private Flux<String> callAi(String dishName, java.util.function.Function<StringBuilder, String> complete) {

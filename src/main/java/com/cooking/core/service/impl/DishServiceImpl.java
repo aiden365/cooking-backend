@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
 @Service
 public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> implements DishService {
 
-    private static final String DASHSCOPE_IMAGE_API = "/api/v1/services/aigc/text2image/image-synthesis";
+    private static final String DASHSCOPE_IMAGE_API = "/compatible-mode/v1/responses";
     private static final String DISH_IMAGE_SIZE = "1024*1024";
 
     @Autowired
@@ -74,8 +74,6 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private String dashscopeApiKey;
     @Value("${spring.ai.dashscope.base-url:https://dashscope.aliyuncs.com}")
     private String dashscopeBaseUrl;
-    @Value("${spring.ai.dashscope.image.model:wanx2.1-t2i-turbo}")
-    private String dashscopeImageModel;
 
     private final RestClient restClient = RestClient.builder().build();
 
@@ -306,7 +304,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
         try {
             String prompt = buildDishImagePrompt(dishName);
-            String imageUrl = callDashScopeImageApi(prompt);
+            String imageUrl = callDashScopeImageApi(dishName);
             if (!StringUtils.hasText(imageUrl)) {
                 return "";
             }
@@ -331,9 +329,11 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     }
 
     private String callDashScopeImageApi(String prompt) {
+
         JSONObject requestBody = new JSONObject();
-        requestBody.put("model", dashscopeImageModel);
-        requestBody.put("input", JSONObject.of("prompt", prompt));
+        requestBody.put("model", "qwen3.5-plus");
+        requestBody.put("tools", JSONArray.of(JSONObject.of("type", "web_search_image")));
+        requestBody.put("input", prompt);
         requestBody.put("parameters", JSONObject.of("size", DISH_IMAGE_SIZE, "n", 1));
 
         String responseBody = restClient.post()
@@ -347,6 +347,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         if (!StringUtils.hasText(responseBody)) {
             return "";
         }
+        System.out.println(responseBody);
         JSONObject responseJson = JSONObject.parseObject(responseBody);
         JSONObject output = responseJson.getJSONObject("output");
         if (output == null) {

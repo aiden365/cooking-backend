@@ -1,16 +1,19 @@
 package com.cooking.config;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
+import com.alibaba.cloud.ai.dashscope.api.DashScopeImageApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
 import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingOptions;
+import com.alibaba.cloud.ai.dashscope.image.DashScopeImageModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.TokenCountBatchingStrategy;
+import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -65,9 +68,9 @@ public class SpringAiConfig {
 
     @Bean(name = "qwen")
     public ChatModel qwen() {
-        return DashScopeChatModel.builder().dashScopeApi(DashScopeApi.builder().apiKey(dashscopeApiKey).build())
-                .defaultOptions(DashScopeChatOptions.builder().model("qwen-plus").build()).build();
+        return DashScopeChatModel.builder().dashScopeApi(DashScopeApi.builder().apiKey(dashscopeApiKey).build()).defaultOptions(DashScopeChatOptions.builder().model("qwen-plus").build()).build();
     }
+
 
     @Bean(name = "qwenEmbedding")
     public EmbeddingModel qwenEmbedding() {
