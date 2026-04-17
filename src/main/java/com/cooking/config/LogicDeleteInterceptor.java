@@ -77,7 +77,8 @@ public class LogicDeleteInterceptor implements Interceptor {
         String finalSql = originalSql;
         try {
             finalSql = SqlLogicDeleteHandle.handleSql(SqlLogicDeleteHandle.sanitizeSingleSql(originalSql));
-
+            // 如果 IN () 中没有值，则替换为 IN ('-1')
+            finalSql = finalSql.replaceAll("(?i)IN\\s*\\(\\s*\\)", "IN ('-1')");
         } catch (Exception e) {
             finalSql = originalSql;
             log.warn("逻辑删除拦截器，处理SQL失败", e);

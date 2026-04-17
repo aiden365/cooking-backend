@@ -167,9 +167,22 @@ public class UserIndividualDishApi extends BaseController {
     }
 
 
+
+
+    @PostMapping("detail")
+    public BaseResponse detail(@RequestBody JSONObject params) {
+        Long id = params.getLong("individualDishId");
+        if (id == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
+        }
+        UserIndividualDishEntity entity = userIndividualDishService.getById(id);
+        return ok(entity);
+    }
+
+
     @PostMapping("delete")
     public BaseResponse delete(@RequestBody JSONObject params) {
-        Long id = params.getLong("id");
+        Long id = params.getLong("individualDishId");
         if (id == null) {
             throw new ApiException(BaseResponse.Code.fail.code, "id不能为空");
         }

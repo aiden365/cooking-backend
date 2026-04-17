@@ -8,7 +8,7 @@
             and uid.user_id = #{params.userId}
         </if>
         <if test="params.search != null">
-            and exists(select 1 from tbl_dish where tbl_dish.id = uid.dish_id and tbl_dish.name = concat('%',#{params.search},'%'))
+            and exists(select 1 from tbl_dish where tbl_dish.id = uid.dish_id and tbl_dish.name like concat('%',#{params.search},'%'))
         </if>
         order by create_time desc
     </select>
