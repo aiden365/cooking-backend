@@ -1,8 +1,12 @@
 package com.cooking.core.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.cooking.base.BaseServiceImpl;
 import com.cooking.core.entity.DishEntity;
 import com.cooking.core.entity.DishFlavorEntity;
@@ -15,16 +19,23 @@ import com.cooking.core.service.DishService;
 import com.cooking.core.service.DishStepService;
 import com.cooking.dto.AIRecipeDTO;
 import com.cooking.dto.DishSaveDTO;
+import com.cooking.enums.PathEnum;
 import com.cooking.exceptions.OtherException;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,8 +48,12 @@ import java.util.stream.Collectors;
  * @author aiden
  * @since 2026-02-03
  */
+@Slf4j
 @Service
 public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> implements DishService {
+
+    private static final String DASHSCOPE_IMAGE_API = "/api/v1/services/aigc/text2image/image-synthesis";
+    private static final String DISH_IMAGE_SIZE = "1024*1024";
 
     @Autowired
     private DishMapper dishMapper;
@@ -50,6 +65,19 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private DishStepService dishStepService;
     @Resource(name = "dishVectorStore")
     private VectorStore dishVectorStore;
+    @Resource(name = "qwen")
+    private ChatModel qwenChatModel;
+
+    @Value("${upload.path}")
+    private String uploadPath;
+    @Value("${spring.ai.dashscope.api-key}")
+    private String dashscopeApiKey;
+    @Value("${spring.ai.dashscope.base-url:https://dashscope.aliyuncs.com}")
+    private String dashscopeBaseUrl;
+    @Value("${spring.ai.dashscope.image.model:wanx2.1-t2i-turbo}")
+    private String dashscopeImageModel;
+
+    private final RestClient restClient = RestClient.builder().build();
 
     @Override
     public List<DishEntity> findList(Map<String, Object> params) {
@@ -268,6 +296,116 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
         this.saveDishToVectorStore(dishEntity);
         return dishEntity;
+    }
+
+    @Override
+    public String searchDishImageAndDownload(String dishName) {
+        if (!StringUtils.hasText(dishName)) {
+            return "";
+        }
+
+        try {
+            String prompt = buildDishImagePrompt(dishName);
+            String imageUrl = callDashScopeImageApi(prompt);
+            if (!StringUtils.hasText(imageUrl)) {
+                return "";
+            }
+            return downloadDishImage(imageUrl);
+        } catch (Exception e) {
+            log.warn("文搜图下载失败,dishName={}", dishName, e);
+            return "";
+        }
+    }
+
+    private String buildDishImagePrompt(String dishName) {
+        String prompt = "请将以下菜名转换为文生图提示词，输出一行中文，突出成品摆盘、食材质感、暖色灯光、写实食物摄影，不要解释。菜名：" + dishName;
+        try {
+            String enhanced = qwenChatModel.call(prompt);
+            if (StringUtils.hasText(enhanced)) {
+                return enhanced.trim();
+            }
+        } catch (Exception e) {
+            log.warn("菜品图片提示词增强失败，使用原始菜名,dishName={}", dishName, e);
+        }
+        return dishName.trim();
+    }
+
+    private String callDashScopeImageApi(String prompt) {
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("model", dashscopeImageModel);
+        requestBody.put("input", JSONObject.of("prompt", prompt));
+        requestBody.put("parameters", JSONObject.of("size", DISH_IMAGE_SIZE, "n", 1));
+
+        String responseBody = restClient.post()
+                .uri(dashscopeBaseUrl + DASHSCOPE_IMAGE_API)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + dashscopeApiKey)
+                .body(requestBody.toJSONString())
+                .retrieve()
+                .body(String.class);
+
+        if (!StringUtils.hasText(responseBody)) {
+            return "";
+        }
+        JSONObject responseJson = JSONObject.parseObject(responseBody);
+        JSONObject output = responseJson.getJSONObject("output");
+        if (output == null) {
+            return "";
+        }
+        JSONArray results = output.getJSONArray("results");
+        if (results == null || results.isEmpty()) {
+            results = output.getJSONArray("images");
+        }
+        if (results == null || results.isEmpty()) {
+            return "";
+        }
+        JSONObject first = results.getJSONObject(0);
+        return first == null ? "" : first.getString("url");
+    }
+
+    private String downloadDishImage(String imageUrl) {
+        ResponseEntity<byte[]> response = restClient.get()
+                .uri(imageUrl)
+                .retrieve()
+                .toEntity(byte[].class);
+        byte[] imageBytes = response.getBody();
+        if (imageBytes == null || imageBytes.length == 0) {
+            return "";
+        }
+
+        String extension = resolveImageExtension(response.getHeaders().getContentType(), imageUrl);
+        String relativePath = PathEnum.dish_img_path.getValue() + "/" + IdUtil.simpleUUID() + extension;
+        String fullPath = uploadPath + relativePath;
+        FileUtil.mkdir(uploadPath + PathEnum.dish_img_path.getValue());
+        FileUtil.writeBytes(imageBytes, fullPath);
+        return relativePath;
+    }
+
+    private String resolveImageExtension(MediaType mediaType, String imageUrl) {
+        if (mediaType != null) {
+            String subtype = mediaType.getSubtype();
+            if (StringUtils.hasText(subtype)) {
+                if ("jpeg".equalsIgnoreCase(subtype) || "jpg".equalsIgnoreCase(subtype)) {
+                    return ".jpg";
+                }
+                if ("png".equalsIgnoreCase(subtype)) {
+                    return ".png";
+                }
+                if ("webp".equalsIgnoreCase(subtype)) {
+                    return ".webp";
+                }
+            }
+        }
+        if (StringUtils.hasText(imageUrl)) {
+            String lower = imageUrl.toLowerCase(Locale.ROOT);
+            if (lower.contains(".png")) {
+                return ".png";
+            }
+            if (lower.contains(".webp")) {
+                return ".webp";
+            }
+        }
+        return ".jpg";
     }
 
 

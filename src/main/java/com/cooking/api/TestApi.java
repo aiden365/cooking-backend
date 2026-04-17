@@ -6,6 +6,7 @@ import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.cooking.base.BaseController;
 import com.cooking.base.BaseResponse;
+import com.cooking.core.service.DishService;
 import com.cooking.utils.AiResponseUtils;
 import com.cooking.utils.EmailUtils;
 import jakarta.annotation.Resource;
@@ -89,6 +90,8 @@ public class TestApi extends BaseController {
     private VectorStore dishVectorStore;
     @Autowired
     EmailUtils emailUtils;
+    @Autowired
+    private DishService dishService;
 
 
 
@@ -340,6 +343,12 @@ public class TestApi extends BaseController {
         String randomNumbers = RandomUtil.randomNumbers(6);
         emailUtils.sendVerificationCodeEmail("chenjiacheng365@qq.com", randomNumbers, 5);
         return ok();
+    }
+
+    @GetMapping("test/dishImage")
+    public BaseResponse dishImage(@RequestParam String dishName) {
+        String localPath = dishService.searchDishImageAndDownload(dishName);
+        return ok(localPath);
     }
 
 

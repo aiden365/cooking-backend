@@ -1,6 +1,7 @@
 package com.cooking.api;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -93,6 +94,8 @@ public class UserDietRecordApi extends BaseController {
     private NutritionServiceImpl nutritionService;
     @Autowired
     private UserLabelRelServiceImpl userLabelRelService;
+    @Autowired
+    private RepositoryService repositoryService;
 
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
@@ -301,9 +304,6 @@ public class UserDietRecordApi extends BaseController {
 
         Prompt prompt = Prompt.builder().messages(List.of(systemPromptTemplateMessage, message)).build();
 
-        if(true){
-            throw new RuntimeException("测试");
-        }
         StringBuilder buffer = new StringBuilder();
         StringBuilder fullResponse = new StringBuilder();
 
@@ -327,54 +327,35 @@ public class UserDietRecordApi extends BaseController {
 
     private String retrieveNutritionKnowledgeContext(JSONObject userInfo, JSONObject nutritionGoals, List<LabelEntity> labelEntityList) {
         try {
-            Set<String> labelNames = labelEntityList == null ? Collections.emptySet() : labelEntityList.stream()
-                    .map(LabelEntity::getLabelName)
-                    .filter(StringUtils::hasText)
-                    .map(String::trim)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
+
+            Set<String> labelNames = labelEntityList == null ? Collections.emptySet() : labelEntityList.stream().map(LabelEntity::getLabelName).filter(StringUtils::hasText).map(String::trim).collect(Collectors.toCollection(LinkedHashSet::new));
 
             List<NutritionQueryTask> queryTasks = new ArrayList<>();
-            queryTasks.addAll(buildSafetyQueries(labelNames));
-            /*queryTasks.addAll(buildGoalQueries(nutritionGoals));*/
-            /*queryTasks.addAll(buildProfileQueries(userInfo));*/
+            queryTasks.addAll(buildLabelQueries(labelNames));
+            queryTasks.addAll(buildAgeQueries(userInfo));
             if (queryTasks.isEmpty()) {
                 return "";
             }
 
-            List<NutritionHit> mergedHits = queryTasks.parallelStream()
-                    .map(this::searchNutrition)
-                    .flatMap(List::stream)
-                    .collect(Collectors.toList());
-            if (mergedHits.isEmpty()) {
+            List<RepositoryEntity> repositoryEntities = queryTasks.parallelStream().map(this::searchNutrition).flatMap(List::stream).collect(Collectors.toList());
+            if (repositoryEntities.isEmpty()) {
                 return "";
             }
 
-            Map<String, NutritionHit> bestHitMap = new LinkedHashMap<>();
-            for (NutritionHit hit : mergedHits) {
-                hit.setScore(scoreHit(hit, labelNames, nutritionGoals));
-                String dedupeKey = hit.getRepositoryId() + "::" + hit.getText();
-                NutritionHit existing = bestHitMap.get(dedupeKey);
-                if (existing == null || hit.getScore() > existing.getScore()) {
-                    bestHitMap.put(dedupeKey, hit);
-                }
+            StringBuilder buffer = new StringBuilder();
+            for (RepositoryEntity mergedHit : repositoryEntities) {
+                buffer.append("以下是").append(mergedHit.getName()).append("的内容，该知识与用户的年龄和身体状态有关，请参考并在回答时引用其中的内容：").append("\n");
+                buffer.append(mergedHit.getContent()).append("\n");
             }
 
-            List<NutritionHit> selectedHits = bestHitMap.values().stream()
-                    .sorted(Comparator.comparingDouble(NutritionHit::getScore).reversed())
-                    .limit(NUTRITION_CONTEXT_LIMIT)
-                    .toList();
-            if (selectedHits.isEmpty()) {
-                return "";
-            }
-
-            return formatKnowledgeContext(selectedHits);
+            return buffer.toString();
         } catch (Exception e) {
             log.warn("营养知识检索失败，已降级为普通生成", e);
             return "";
         }
     }
 
-    private List<NutritionHit> searchNutrition(NutritionQueryTask task) {
+    private List<RepositoryEntity> searchNutrition(NutritionQueryTask task) {
         try {
             SearchRequest request = SearchRequest.builder().query(task.query()).similarityThreshold(task.threshold()).filterExpression(new FilterExpressionBuilder().eq("type", 2).build()).topK(task.topK()).build();
             List<Document> documents = repositoryVectorStore.similaritySearch(request);
@@ -382,7 +363,7 @@ public class UserDietRecordApi extends BaseController {
                 return Collections.emptyList();
             }
 
-            List<NutritionHit> hits = new ArrayList<>();
+            List<RepositoryEntity> hits = new ArrayList<>();
             for (int i = 0; i < documents.size(); i++) {
                 Document document = documents.get(i);
                 String text = normalizeKnowledgeText(document.getText());
@@ -390,7 +371,22 @@ public class UserDietRecordApi extends BaseController {
                     continue;
                 }
                 String repositoryId = Optional.ofNullable(document.getMetadata()).map(metadata -> metadata.get("repository_id")).map(Object::toString).orElse("unknown");
-                hits.add(new NutritionHit(task.category(), task.query(), repositoryId, text, i, task.priority()));
+
+                RepositoryEntity repositoryEntity = repositoryService.getById(repositoryId);
+                if (repositoryEntity == null) {
+                    continue;
+                }
+                if (repositoryEntity.getDeleted() == 1) {
+                    continue;
+                }
+                if (repositoryEntity.getType() != 2) {
+                    continue;
+                }
+                if(StrUtil.isBlank(repositoryEntity.getContent())){
+                    continue;
+                }
+
+                hits.add(repositoryEntity);
             }
             return hits;
         } catch (Exception e) {
@@ -399,7 +395,7 @@ public class UserDietRecordApi extends BaseController {
         }
     }
 
-    private List<NutritionQueryTask> buildSafetyQueries(Set<String> labelNames) {
+    private List<NutritionQueryTask> buildLabelQueries(Set<String> labelNames) {
         if (labelNames == null || labelNames.isEmpty()) {
             return Collections.emptyList();
         }
@@ -430,6 +426,21 @@ public class UserDietRecordApi extends BaseController {
         if (!summary.isEmpty()) {
             tasks.add(new NutritionQueryTask("goal", "营养目标为" + String.join("，", summary) + "，请给出三餐营养分配建议", 0.60f, 4, 2));
         }
+        return tasks;
+    }
+
+    private List<NutritionQueryTask> buildAgeQueries(JSONObject userInfo) {
+        Integer age = userInfo == null ? null : Integer.parseInt(userInfo.getString("年龄"));
+        List<NutritionQueryTask> tasks = new ArrayList<>();
+        if(age == null){
+            return tasks;
+        }
+        String ageText = age >= 6 && age <= 17 ? "青少年" : age >= 18 && age <= 64 ? "成年人" : age >= 65 ? "老年人" : null;
+        if(!StringUtils.hasText(ageText)){
+            return tasks;
+        }
+
+        tasks.add(new NutritionQueryTask("age", "适用于"+ageText+"的健康饮食建议", 0.9f, 1, 1));
         return tasks;
     }
 

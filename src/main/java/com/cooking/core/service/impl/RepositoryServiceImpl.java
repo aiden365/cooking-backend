@@ -11,6 +11,8 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -88,6 +90,9 @@ public class RepositoryServiceImpl extends BaseServiceImpl<RepositoryMapper, Rep
 
     @Override
     public Map<String, Object> rebuildAllVectorStore() {
+        FilterExpressionBuilder exprBuilder = new FilterExpressionBuilder();
+        Filter.Expression expr = exprBuilder.or(exprBuilder.eq("type", 1), exprBuilder.eq("type", 2)).build();
+        repositoryVectorStore.delete(expr);
         List<RepositoryEntity> repositoryEntities = list();
         int chunkCount = 0;
         for (RepositoryEntity repositoryEntity : repositoryEntities) {
@@ -117,16 +122,13 @@ public class RepositoryServiceImpl extends BaseServiceImpl<RepositoryMapper, Rep
     }
 
     private List<Document> buildRepositoryDocuments(RepositoryEntity repositoryEntity) {
-        String normalizedContent = normalizeContent(repositoryEntity.getContent());
+        String content = Objects.equals(repositoryEntity.getType(), 1) ? repositoryEntity.getContent() : repositoryEntity.getDescription();
+        String normalizedContent = normalizeContent(content);
         if (!StringUtils.hasText(normalizedContent)) {
             return Collections.emptyList();
         }
 
-        List<String> semanticChunks = splitSemanticChunks(repositoryEntity.getType(), normalizedContent);
-        if (semanticChunks.isEmpty()) {
-            return Collections.emptyList();
-        }
-
+        List<String> semanticChunks = Collections.singletonList(content);
         List<Document> documents = new ArrayList<>();
         for (String semanticChunk : semanticChunks) {
             if (!StringUtils.hasText(semanticChunk)) {
@@ -137,9 +139,8 @@ public class RepositoryServiceImpl extends BaseServiceImpl<RepositoryMapper, Rep
             metadata.put("type", repositoryEntity.getType());
             metadata.put("repository_id", repositoryEntity.getId().toString());
 
-            String documentText = buildVectorText(repositoryEntity, semanticChunk);
-            Document document = new Document(documentText, metadata);
-            if (documentText.length() > SEMANTIC_CHUNK_MAX_LENGTH) {
+            Document document = new Document(semanticChunk, metadata);
+            if (semanticChunk.length() > SEMANTIC_CHUNK_MAX_LENGTH) {
                 documents.addAll(tokenTextSplitter.apply(List.of(document)));
             } else {
                 documents.add(document);

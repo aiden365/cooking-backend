@@ -31,4 +31,6 @@ public interface DishService extends BaseService<DishEntity> {
     DishEntity saveDish(DishSaveDTO dishSaveDTO);
 
     void saveDishToVectorStore(DishEntity dishEntity);
+
+    String searchDishImageAndDownload(String dishName);
 }
