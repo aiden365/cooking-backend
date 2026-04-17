@@ -89,7 +89,7 @@ public class DishApi extends BaseController {
 
 
     @Resource(name = "qwen")
-    private ChatModel qwenChatModel;
+    private ChatModel chatModel;
     @Resource(name = "ollamaQwen")
     private ChatModel ollamaQwen;
 
@@ -295,9 +295,9 @@ public class DishApi extends BaseController {
     /**
      * AI生成并保存菜谱
      */
-    @PostMapping("aigc")
-    public Flux<String> aigc(@RequestBody JSONObject params) {
-        String dishName = params.getString("dishName");
+    @RequestMapping("aigc")
+    public Flux<String> aigc(String dishName) {
+        /*String dishName = params.getString("dishName");*/
         if (!StringUtils.hasText(dishName)) {
             throw new ApiException(BaseResponse.Code.fail.code, "dishName不能为空");
         }
@@ -318,12 +318,13 @@ public class DishApi extends BaseController {
     }
 
     private Flux<String> callAi(String dishName, java.util.function.Function<StringBuilder, String> complete) {
-        Prompt prompt = buildPrompt(dishName, null);
+        String knowledgeContext = retrieveKnowledgeContext(dishName);
+        Prompt prompt = buildPrompt(dishName, knowledgeContext);
 
         StringBuilder buffer = new StringBuilder();
         StringBuilder fullResponse = new StringBuilder();
 
-        Flux<String> lineFlux = ollamaQwen.stream(prompt).map(AiResponseUtils::extractChunkText).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
+        Flux<String> lineFlux = chatModel.stream(prompt).map(AiResponseUtils::extractChunkText).handle((String chunk, SynchronousSink<String> sink) -> AiResponseUtils.appendAndEmitCompleteLines(buffer, chunk, sink));
 
         Flux<String> remainingFlux = Flux.defer(() -> {
             String lastLine = buffer.toString().trim();
@@ -363,35 +364,15 @@ public class DishApi extends BaseController {
             throw new RuntimeException(e);
         }
 
-        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", JSONObject.of("type", "error","简短的几个字说明生成失败的原因", "错误原因")));
-
-
+        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", JSONObject.of("type", "error","简短的几个字说明生成失败的原因", "错误原因"), "knowledgeContext", StringUtils.hasText(knowledgeContext) ? knowledgeContext : "无"));
         PromptTemplate promptTemplate = new PromptTemplate(dishPrompt);
         Message userMessage = promptTemplate.createMessage(Map.of("dishName", dishName));
-
-        List<Message> messages = new ArrayList<>();
-        messages.add(systemMessage);
-        if (StringUtils.hasText(knowledgeContext)) {
-            messages.add(new SystemMessage("""
-                    ### 知识库参考资料
-                    以下内容来自系统知识库检索结果，请优先参考其内容生成菜谱。
-                    若检索内容不足或与食品安全常识冲突，请以食品安全和通用烹饪常识为准，不要编造不存在的专业结论。
-
-                    %s
-                    """.formatted(knowledgeContext)));
-        }
-        messages.add(userMessage);
-        return Prompt.builder().messages(messages).build();
+        return Prompt.builder().messages(List.of(systemMessage, userMessage)).build();
     }
 
     private String retrieveKnowledgeContext(String dishName) {
         try {
-            SearchRequest searchRequest = SearchRequest.builder()
-                    .query(dishName)
-                    .similarityThreshold(0.5f)
-                    .filterExpression(new FilterExpressionBuilder().eq("type", 1).build())
-                    .topK(8)
-                    .build();
+            SearchRequest searchRequest = SearchRequest.builder().query(dishName).similarityThreshold(0.8f).filterExpression(new FilterExpressionBuilder().eq("type", 1).build()).topK(8).build();
             List<Document> documents = repositoryVectorStore.similaritySearch(searchRequest);
             if (documents == null || documents.isEmpty()) {
                 return "";

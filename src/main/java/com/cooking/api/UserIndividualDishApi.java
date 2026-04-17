@@ -20,6 +20,10 @@ import com.cooking.utils.AiResponseUtils;
 import com.cooking.utils.SystemContextHelper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.chat.messages.Message;
@@ -80,9 +84,8 @@ public class UserIndividualDishApi extends BaseController {
     private org.springframework.core.io.Resource dishJsonLine;
     @Value("classpath:/template/aigc_fail.json5")
     private org.springframework.core.io.Resource aiFailJson;
-
-
-
+    @Autowired
+    private VectorStore repositoryVectorStore;
 
 
     @PostMapping("page")
@@ -211,6 +214,8 @@ public class UserIndividualDishApi extends BaseController {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        String knowledgeContext = retrieveKnowledgeContext(null);
+
 
         Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", JSONObject.of("type", "error","message", "错误原因")));
         Map<String, Object> userParams = new HashMap<>();
@@ -222,6 +227,51 @@ public class UserIndividualDishApi extends BaseController {
         Message userMessage = new PromptTemplate(userIndividualPrompt).createMessage(userParams);
 
         return Prompt.builder().messages(List.of(systemMessage, userMessage)).build();
+    }
+
+    private String retrieveKnowledgeContext(String dishName) {
+        try {
+            SearchRequest searchRequest = SearchRequest.builder().query(dishName).similarityThreshold(0.8f).filterExpression(new FilterExpressionBuilder().eq("type", 1).build()).topK(8).build();
+            List<Document> documents = repositoryVectorStore.similaritySearch(searchRequest);
+            if (documents == null || documents.isEmpty()) {
+                return "";
+            }
+
+            List<String> knowledgeList = documents.stream()
+                    .filter(document -> document.getMetadata() != null && document.getMetadata().containsKey("repository_id"))
+                    .sorted(Comparator.comparingInt(document -> repositorySort(document.getMetadata().get("type"))))
+                    .map(Document::getText)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .collect(Collectors.toCollection(LinkedHashSet::new))
+                    .stream()
+                    .limit(4)
+                    .toList();
+
+            if (knowledgeList.isEmpty()) {
+                return "";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < knowledgeList.size(); i++) {
+                builder.append(i + 1).append(". ").append(knowledgeList.get(i)).append('\n');
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            log.warn("知识库检索失败，已降级为普通生成,dishName={}", dishName, e);
+            return "";
+        }
+    }
+
+    private int repositorySort(Object type) {
+        if (type == null) {
+            return Integer.MAX_VALUE;
+        }
+        try {
+            return Integer.parseInt(type.toString());
+        } catch (NumberFormatException e) {
+            return Integer.MAX_VALUE;
+        }
     }
 
     private String buildDietaryPreferenceText(List<LabelEntity> labels) {

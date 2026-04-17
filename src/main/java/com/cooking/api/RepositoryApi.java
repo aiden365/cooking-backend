@@ -10,19 +10,12 @@ import com.cooking.core.entity.RepositoryEntity;
 import com.cooking.core.entity.UserEntity;
 import com.cooking.core.service.RepositoryService;
 import com.cooking.core.service.UserService;
-import jakarta.annotation.Resource;
-import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import org.springframework.ai.document.Document;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
-import org.springframework.ai.vectorstore.SearchRequest;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,10 +34,6 @@ public class RepositoryApi extends BaseController {
 
     @Autowired
     private RepositoryService repositoryService;
-    @Resource(name = "repositoryVectorStore")
-    private VectorStore repositoryVectorStore;
-    @Autowired
-    private TokenTextSplitter tokenTextSplitter;
     @Autowired
     private UserService userService;
 
@@ -97,21 +86,7 @@ public class RepositoryApi extends BaseController {
         }
 
         repositoryService.saveOrUpdate(repositoryEntity);
-
-        List<Document> existingDocuments = repositoryVectorStore.similaritySearch(SearchRequest.builder().query("").filterExpression(new FilterExpressionBuilder().eq("repository_id", repositoryEntity.getId().toString()).build()).build());
-        if (existingDocuments != null && !existingDocuments.isEmpty()){
-            List<String> idsToDelete = existingDocuments.stream().map(Document::getId).collect(Collectors.toList());
-            repositoryVectorStore.delete(idsToDelete);
-        }
-
-        String content = repositoryEntity.getContent() == null ? "" : repositoryEntity.getContent();
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("type", repositoryEntity.getType());
-        metadata.put("repository_id", repositoryEntity.getId().toString()); // Add original ID to metadata
-        Document document = new Document(content, metadata);
-
-        List<Document> chunks = tokenTextSplitter.apply(List.of(document));
-        repositoryVectorStore.add(chunks);
+        repositoryService.saveToVectorStore(repositoryEntity);
 
         return ok();
     }
@@ -123,22 +98,14 @@ public class RepositoryApi extends BaseController {
             return fail("id列表不能为空");
         }
 
-        // Find all chunk IDs associated with the repository IDs and delete them from the vector store.
-        List<String> chunkIdsToDelete = new ArrayList<>();
-        for (Long repoId : ids) {
-            List<Document> documentsToDelete = repositoryVectorStore.similaritySearch(SearchRequest.builder().filterExpression(new FilterExpressionBuilder().eq("repository_id", repoId.toString()).build()).build());
-            if (documentsToDelete != null && !documentsToDelete.isEmpty()) {
-                chunkIdsToDelete.addAll(documentsToDelete.stream().map(Document::getId).toList());
-            }
-        }
-
-        if (!chunkIdsToDelete.isEmpty()) {
-            repositoryVectorStore.delete(chunkIdsToDelete);
-        }
-
-        // Finally, delete the entries from the main database.
+        repositoryService.deleteFromVectorStore(ids);
         repositoryService.removeByIds(ids);
 
         return ok();
+    }
+
+    @PostMapping("rebuildVectorStore")
+    public BaseResponse rebuildVectorStore() {
+        return ok(repositoryService.rebuildAllVectorStore());
     }
 }

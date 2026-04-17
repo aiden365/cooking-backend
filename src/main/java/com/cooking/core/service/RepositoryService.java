@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.cooking.base.BaseService;
 import com.cooking.core.entity.RepositoryEntity;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,4 +24,10 @@ public interface RepositoryService extends BaseService<RepositoryEntity> {
     IPage<RepositoryEntity> findPage(IPage<RepositoryEntity> page, Map<String, Object> params);
 
     void deleteByIds(Set<String> ids);
+
+    void saveToVectorStore(RepositoryEntity repositoryEntity);
+
+    void deleteFromVectorStore(Collection<Long> repositoryIds);
+
+    Map<String, Object> rebuildAllVectorStore();
 }

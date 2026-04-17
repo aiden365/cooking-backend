@@ -22,9 +22,12 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,6 +59,7 @@ import java.util.stream.Collectors;
 public class UserDietRecordApi extends BaseController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final int NUTRITION_CONTEXT_LIMIT = 8;
 
     @Autowired
     private UserDietRecordService userDietRecordService;
@@ -78,6 +82,8 @@ public class UserDietRecordApi extends BaseController {
 
     @Resource(name = "qwen")
     private ChatModel chatModel;
+    @Resource(name = "repositoryVectorStore")
+    private VectorStore repositoryVectorStore;
 
     @Value("classpath:/template/aigc_diet_json_line.txt")
     private org.springframework.core.io.Resource aigcDietJsonLine;
@@ -237,9 +243,10 @@ public class UserDietRecordApi extends BaseController {
         return ok();
     }
 
-    @PostMapping("aigc")
-    public Flux<String> aigc(@RequestBody JSONObject params) {
-        List<Long> labelIds = params.getList("labelIds", Long.class);
+    @RequestMapping("aigc")
+    public Flux<String> aigc(/*@RequestBody JSONObject params*/) {
+        List<Long> labelIds = labelService.lambdaQuery().in(LabelEntity::getLabelName, Arrays.asList("减脂餐", "月经期")).list().stream().map(BaseEntity::getId).toList();
+        /*List<Long> labelIds = params.getList("labelIds", Long.class);*/
         UserEntity currentUser = SystemContextHelper.getCurrentUser();
         Long userId = currentUser.getId();
 
@@ -279,14 +286,24 @@ public class UserDietRecordApi extends BaseController {
         // 4. 查询用户标签/健康状况
         List<LabelEntity> labelEntityList = labelService.listByIds(new HashSet<>(labelIds));
         String labelNames = CollUtil.join(labelEntityList.stream().map(LabelEntity::getLabelName).toList(), ",");
+        String knowledgeContext = retrieveNutritionKnowledgeContext(userInfo, nutritionGoals, labelEntityList);
+
+        System.out.println(knowledgeContext);
 
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(aigcDietSystemPrompt);
-        Message systemPromptTemplateMessage = systemPromptTemplate.createMessage(Map.of("aigcDietJsonLine", aigcDietJsonLineString, "aiFailJson", JSONObject.of("type", "error","message", "错误原因").toJSONString()));
+        Message systemPromptTemplateMessage = systemPromptTemplate.createMessage(Map.of(
+                "aigcDietJsonLine", aigcDietJsonLineString,
+                "aiFailJson", JSONObject.of("type", "error","message", "错误原因").toJSONString(),
+                "knowledgeContext", StringUtils.hasText(knowledgeContext) ? knowledgeContext : "无"
+        ));
         PromptTemplate promptTemplate = new PromptTemplate(aigcDietUserPrompt);
         Message message = promptTemplate.createMessage(Map.of("userInfo", userInfo.toJSONString(),"goals", nutritionGoals.toJSONString(),"history", JSONObject.toJSONString(recentThreeDayList),"labels", labelNames));
 
         Prompt prompt = Prompt.builder().messages(List.of(systemPromptTemplateMessage, message)).build();
 
+        if(true){
+            throw new RuntimeException("测试");
+        }
         StringBuilder buffer = new StringBuilder();
         StringBuilder fullResponse = new StringBuilder();
 
@@ -306,6 +323,343 @@ public class UserDietRecordApi extends BaseController {
 
         return lineFlux.concatWith(remainingFlux).doOnNext(line -> AiResponseUtils.appendLine(fullResponse, line)).doOnComplete(() -> log.info("test41 AI full response:\n{}", fullResponse));
 
+    }
+
+    private String retrieveNutritionKnowledgeContext(JSONObject userInfo, JSONObject nutritionGoals, List<LabelEntity> labelEntityList) {
+        try {
+            Set<String> labelNames = labelEntityList == null ? Collections.emptySet() : labelEntityList.stream()
+                    .map(LabelEntity::getLabelName)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+
+            List<NutritionQueryTask> queryTasks = new ArrayList<>();
+            queryTasks.addAll(buildSafetyQueries(labelNames));
+            /*queryTasks.addAll(buildGoalQueries(nutritionGoals));*/
+            /*queryTasks.addAll(buildProfileQueries(userInfo));*/
+            if (queryTasks.isEmpty()) {
+                return "";
+            }
+
+            List<NutritionHit> mergedHits = queryTasks.parallelStream()
+                    .map(this::searchNutrition)
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList());
+            if (mergedHits.isEmpty()) {
+                return "";
+            }
+
+            Map<String, NutritionHit> bestHitMap = new LinkedHashMap<>();
+            for (NutritionHit hit : mergedHits) {
+                hit.setScore(scoreHit(hit, labelNames, nutritionGoals));
+                String dedupeKey = hit.getRepositoryId() + "::" + hit.getText();
+                NutritionHit existing = bestHitMap.get(dedupeKey);
+                if (existing == null || hit.getScore() > existing.getScore()) {
+                    bestHitMap.put(dedupeKey, hit);
+                }
+            }
+
+            List<NutritionHit> selectedHits = bestHitMap.values().stream()
+                    .sorted(Comparator.comparingDouble(NutritionHit::getScore).reversed())
+                    .limit(NUTRITION_CONTEXT_LIMIT)
+                    .toList();
+            if (selectedHits.isEmpty()) {
+                return "";
+            }
+
+            return formatKnowledgeContext(selectedHits);
+        } catch (Exception e) {
+            log.warn("营养知识检索失败，已降级为普通生成", e);
+            return "";
+        }
+    }
+
+    private List<NutritionHit> searchNutrition(NutritionQueryTask task) {
+        try {
+            SearchRequest request = SearchRequest.builder().query(task.query()).similarityThreshold(task.threshold()).filterExpression(new FilterExpressionBuilder().eq("type", 2).build()).topK(task.topK()).build();
+            List<Document> documents = repositoryVectorStore.similaritySearch(request);
+            if (documents == null || documents.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            List<NutritionHit> hits = new ArrayList<>();
+            for (int i = 0; i < documents.size(); i++) {
+                Document document = documents.get(i);
+                String text = normalizeKnowledgeText(document.getText());
+                if (!StringUtils.hasText(text)) {
+                    continue;
+                }
+                String repositoryId = Optional.ofNullable(document.getMetadata()).map(metadata -> metadata.get("repository_id")).map(Object::toString).orElse("unknown");
+                hits.add(new NutritionHit(task.category(), task.query(), repositoryId, text, i, task.priority()));
+            }
+            return hits;
+        } catch (Exception e) {
+            log.warn("营养子查询检索失败，query={}", task.query(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<NutritionQueryTask> buildSafetyQueries(Set<String> labelNames) {
+        if (labelNames == null || labelNames.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<NutritionQueryTask> tasks = new ArrayList<>();
+        for (String labelName : labelNames) {
+            tasks.add(new NutritionQueryTask("safety", "针对" + labelName + "状态的饮食禁忌与适宜食物建议", 0.90f, 2, 3));
+        }
+        /*tasks.add(new NutritionQueryTask("safety", "用户当前状态为" + String.join("、", labelNames) + "，今日三餐饮食禁忌与注意事项", 0.68f, 4, 3));*/
+        return tasks;
+    }
+
+    private List<NutritionQueryTask> buildGoalQueries(JSONObject nutritionGoals) {
+        if (nutritionGoals == null || nutritionGoals.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<NutritionQueryTask> tasks = new ArrayList<>();
+        List<String> summary = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : nutritionGoals.entrySet()) {
+            String goalName = entry.getKey();
+            String goalValue = entry.getValue() == null ? "" : entry.getValue().toString();
+            if (!StringUtils.hasText(goalName) || !StringUtils.hasText(goalValue)) {
+                continue;
+            }
+            summary.add(goalName + goalValue);
+            tasks.add(new NutritionQueryTask("goal", goalName + "目标为" + goalValue + "时的饮食建议和食材搭配原则", 0.62f, 3, 2));
+        }
+        if (!summary.isEmpty()) {
+            tasks.add(new NutritionQueryTask("goal", "营养目标为" + String.join("，", summary) + "，请给出三餐营养分配建议", 0.60f, 4, 2));
+        }
+        return tasks;
+    }
+
+    private List<NutritionQueryTask> buildProfileQueries(JSONObject userInfo) {
+        String gender = userInfo == null ? "" : userInfo.getString("性别");
+        String ageText = userInfo == null ? "" : userInfo.getString("年龄");
+        String heightText = userInfo == null ? "" : userInfo.getString("身高");
+        String weightText = userInfo == null ? "" : userInfo.getString("体重");
+
+        List<NutritionQueryTask> tasks = new ArrayList<>();
+        if (StringUtils.hasText(gender) || StringUtils.hasText(ageText) || (StringUtils.hasText(heightText) && StringUtils.hasText(weightText))) {
+            StringBuilder profileQuery = new StringBuilder("用户");
+            if (StringUtils.hasText(gender)) {
+                profileQuery.append(gender);
+            }
+            if (StringUtils.hasText(ageText)) {
+                profileQuery.append(ageText).append("岁");
+            }
+            Double bmi = calculateBmi(heightText, weightText);
+            if (bmi != null) {
+                profileQuery.append("，BMI约").append(String.format(Locale.ROOT, "%.1f", bmi));
+            }
+            profileQuery.append("，适合的健康饮食建议");
+            tasks.add(new NutritionQueryTask("profile", profileQuery.toString(), 0.8f, 2, 1));
+        }
+        tasks.add(new NutritionQueryTask("profile", "日常三餐营养均衡与健康饮食原则", 0.8f, 2, 1));
+        return tasks;
+    }
+
+    private double scoreHit(NutritionHit hit, Set<String> labelNames, JSONObject nutritionGoals) {
+        double score = hit.getPriority() * 100.0 - hit.getRank() * 5.0;
+        if (matchesAnyLabel(hit.getText(), labelNames)) {
+            score += 20;
+        }
+        if (matchesGoalKeywords(hit.getText(), nutritionGoals)) {
+            score += 12;
+        }
+        if (hasContraindicationConflict(hit.getText(), labelNames)) {
+            score -= 140;
+        }
+        if ("safety".equals(hit.getCategory())) {
+            score += 8;
+        }
+        return score;
+    }
+
+    private boolean hasContraindicationConflict(String text, Set<String> labelNames) {
+        if (!StringUtils.hasText(text) || labelNames == null || labelNames.isEmpty()) {
+            return false;
+        }
+        String normalized = text.toLowerCase(Locale.ROOT);
+        if (labelNames.contains("不吃辣") && containsAny(normalized, List.of("辣椒", "辛辣", "麻辣", "重辣"))) {
+            return true;
+        }
+        if ((labelNames.contains("发烧") || labelNames.contains("感冒"))
+                && containsAny(normalized, List.of("生冷", "冷饮", "冰", "辛辣", "油炸", "烧烤", "酒精"))) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean matchesAnyLabel(String text, Set<String> labelNames) {
+        if (!StringUtils.hasText(text) || labelNames == null || labelNames.isEmpty()) {
+            return false;
+        }
+        for (String labelName : labelNames) {
+            if (StringUtils.hasText(labelName) && text.contains(labelName.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesGoalKeywords(String text, JSONObject nutritionGoals) {
+        if (!StringUtils.hasText(text) || nutritionGoals == null || nutritionGoals.isEmpty()) {
+            return false;
+        }
+
+        String normalized = text.toLowerCase(Locale.ROOT);
+        for (String goalName : nutritionGoals.keySet()) {
+            if (!StringUtils.hasText(goalName)) {
+                continue;
+            }
+            if (goalName.contains("蛋白") && containsAny(normalized, List.of("蛋白", "高蛋白", "优质蛋白"))) {
+                return true;
+            }
+            if (goalName.contains("脂肪") && containsAny(normalized, List.of("低脂", "控脂", "脂肪"))) {
+                return true;
+            }
+            if ((goalName.contains("碳水") || goalName.contains("碳水化合物"))
+                    && containsAny(normalized, List.of("碳水", "主食", "全谷物", "杂粮"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String formatKnowledgeContext(List<NutritionHit> selectedHits) {
+        Map<String, String> titleMap = Map.of(
+                "safety", "【安全禁忌】",
+                "goal", "【营养目标】",
+                "profile", "【人群补充】"
+        );
+
+        List<String> order = List.of("safety", "goal", "profile");
+        StringBuilder builder = new StringBuilder();
+        int globalNo = 1;
+        for (String category : order) {
+            List<NutritionHit> categoryHits = selectedHits.stream()
+                    .filter(hit -> category.equals(hit.getCategory()))
+                    .limit(3)
+                    .toList();
+            if (categoryHits.isEmpty()) {
+                continue;
+            }
+            builder.append(titleMap.getOrDefault(category, "【补充】")).append('\n');
+            for (NutritionHit hit : categoryHits) {
+                builder.append(globalNo++).append(". ")
+                        .append("(来源").append(hit.getRepositoryId()).append(") ")
+                        .append(limitText(hit.getText(), 180))
+                        .append('\n');
+            }
+        }
+
+        return builder.toString().trim();
+    }
+
+    private String normalizeKnowledgeText(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        return text.replace('\r', '\n').replaceAll("\\n{2,}", "\n").trim();
+    }
+
+    private String limitText(String text, int maxLength) {
+        if (!StringUtils.hasText(text) || text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength) + "...";
+    }
+
+    private Double calculateBmi(String heightText, String weightText) {
+        Double height = parseNumber(heightText);
+        Double weight = parseNumber(weightText);
+        if (height == null || weight == null || height <= 0) {
+            return null;
+        }
+        double meter = height > 3 ? height / 100.0 : height;
+        if (meter <= 0) {
+            return null;
+        }
+        return weight / (meter * meter);
+    }
+
+    private Double parseNumber(String text) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        String numeric = text.replaceAll("[^0-9.]", "");
+        if (!StringUtils.hasText(numeric)) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(numeric);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private boolean containsAny(String source, List<String> keywords) {
+        for (String keyword : keywords) {
+            if (source.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private record NutritionQueryTask(String category, String query, float threshold, int topK, int priority) {
+    }
+
+    private static class NutritionHit {
+        private final String category;
+        private final String query;
+        private final String repositoryId;
+        private final String text;
+        private final int rank;
+        private final int priority;
+        private double score;
+
+        private NutritionHit(String category, String query, String repositoryId, String text, int rank, int priority) {
+            this.category = category;
+            this.query = query;
+            this.repositoryId = repositoryId;
+            this.text = text;
+            this.rank = rank;
+            this.priority = priority;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public String getQuery() {
+            return query;
+        }
+
+        public String getRepositoryId() {
+            return repositoryId;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public int getRank() {
+            return rank;
+        }
+
+        public int getPriority() {
+            return priority;
+        }
+
+        public double getScore() {
+            return score;
+        }
+
+        public void setScore(double score) {
+            this.score = score;
+        }
     }
 
 
