@@ -35,9 +35,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.text.MessageFormat;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -54,6 +60,10 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
     private static final String DASHSCOPE_IMAGE_API = "/compatible-mode/v1/responses";
     private static final String DISH_IMAGE_SIZE = "1024*1024";
+    private static final String IMAGE_DOWNLOAD_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+    private static final Duration DISH_IMAGE_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration DISH_IMAGE_READ_TIMEOUT = Duration.ofSeconds(180);
+    private static final Pattern MARKDOWN_IMAGE_PATTERN = Pattern.compile("!\\[[^\\]]*]\\((https?://[^)\\s]+)\\)");
 
     @Autowired
     private DishMapper dishMapper;
@@ -75,7 +85,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     @Value("${spring.ai.dashscope.base-url:https://dashscope.aliyuncs.com}")
     private String dashscopeBaseUrl;
 
-    private final RestClient restClient = RestClient.builder().build();
+    private final RestClient restClient = createRestClient();
 
     @Override
     public List<DishEntity> findList(Map<String, Object> params) {
@@ -304,11 +314,11 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
         try {
             String prompt = buildDishImagePrompt(dishName);
-            String imageUrl = callDashScopeImageApi(dishName);
-            if (!StringUtils.hasText(imageUrl)) {
+            List<String> imageUrls = callDashScopeImageApi(prompt);
+            if (CollUtil.isEmpty(imageUrls)) {
                 return "";
             }
-            return downloadDishImage(imageUrl);
+            return downloadDishImage(imageUrls, dishName);
         } catch (Exception e) {
             log.warn("文搜图下载失败,dishName={}", dishName, e);
             return "";
@@ -316,25 +326,29 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     }
 
     private String buildDishImagePrompt(String dishName) {
-        String prompt = "请将以下菜名转换为文生图提示词，输出一行中文，突出成品摆盘、食材质感、暖色灯光、写实食物摄影，不要解释。菜名：" + dishName;
-        try {
-            String enhanced = qwenChatModel.call(prompt);
-            if (StringUtils.hasText(enhanced)) {
-                return enhanced.trim();
-            }
-        } catch (Exception e) {
-            log.warn("菜品图片提示词增强失败，使用原始菜名,dishName={}", dishName, e);
-        }
-        return dishName.trim();
+        return MessageFormat.format("帮我找一张{0}的菜品照片", dishName);
     }
 
-    private String callDashScopeImageApi(String prompt) {
+    private RestClient createRestClient() {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(DISH_IMAGE_CONNECT_TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(DISH_IMAGE_READ_TIMEOUT);
+
+        return RestClient.builder()
+                .requestFactory(requestFactory)
+                .build();
+    }
+
+    private List<String> callDashScopeImageApi(String prompt) {
 
         JSONObject requestBody = new JSONObject();
         requestBody.put("model", "qwen3.5-plus");
         requestBody.put("tools", JSONArray.of(JSONObject.of("type", "web_search_image")));
         requestBody.put("input", prompt);
-        requestBody.put("parameters", JSONObject.of("size", DISH_IMAGE_SIZE, "n", 1));
 
         String responseBody = restClient.post()
                 .uri(dashscopeBaseUrl + DASHSCOPE_IMAGE_API)
@@ -345,41 +359,112 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
                 .body(String.class);
 
         if (!StringUtils.hasText(responseBody)) {
-            return "";
+            return Collections.emptyList();
         }
-        System.out.println(responseBody);
         JSONObject responseJson = JSONObject.parseObject(responseBody);
-        JSONObject output = responseJson.getJSONObject("output");
-        if (output == null) {
-            return "";
+        JSONArray outputs = responseJson.getJSONArray("output");
+        if (outputs == null || outputs.isEmpty()) {
+            log.warn("文搜图响应缺少output数组");
+            return Collections.emptyList();
         }
-        JSONArray results = output.getJSONArray("results");
-        if (results == null || results.isEmpty()) {
-            results = output.getJSONArray("images");
+
+        for (int i = 0; i < outputs.size(); i++) {
+            JSONObject outputItem = outputs.getJSONObject(i);
+            if (outputItem == null || !"completed".equalsIgnoreCase(outputItem.getString("status"))) {
+                continue;
+            }
+            JSONArray contentArray = outputItem.getJSONArray("content");
+            List<String> imageUrls = extractImageUrlsFromContent(contentArray);
+            if (!imageUrls.isEmpty()) {
+                return imageUrls;
+            }
         }
-        if (results == null || results.isEmpty()) {
-            return "";
-        }
-        JSONObject first = results.getJSONObject(0);
-        return first == null ? "" : first.getString("url");
+
+        log.warn("文搜图响应中未找到status=completed且包含可下载图片地址的content");
+        return Collections.emptyList();
     }
 
-    private String downloadDishImage(String imageUrl) {
-        ResponseEntity<byte[]> response = restClient.get()
-                .uri(imageUrl)
-                .retrieve()
-                .toEntity(byte[].class);
-        byte[] imageBytes = response.getBody();
-        if (imageBytes == null || imageBytes.length == 0) {
-            return "";
+    private List<String> extractImageUrlsFromContent(JSONArray contentArray) {
+        if (contentArray == null || contentArray.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        String extension = resolveImageExtension(response.getHeaders().getContentType(), imageUrl);
-        String relativePath = PathEnum.dish_img_path.getValue() + "/" + IdUtil.simpleUUID() + extension;
-        String fullPath = uploadPath + relativePath;
-        FileUtil.mkdir(uploadPath + PathEnum.dish_img_path.getValue());
-        FileUtil.writeBytes(imageBytes, fullPath);
-        return relativePath;
+        List<String> imageUrls = new ArrayList<>();
+        for (int i = 0; i < contentArray.size(); i++) {
+            JSONObject contentItem = contentArray.getJSONObject(i);
+            if (contentItem == null) {
+                continue;
+            }
+            String text = contentItem.getString("text");
+            if (!StringUtils.hasText(text)) {
+                continue;
+            }
+            Matcher matcher = MARKDOWN_IMAGE_PATTERN.matcher(text);
+            while (matcher.find()) {
+                imageUrls.add(matcher.group(1));
+            }
+        }
+        return imageUrls;
+    }
+
+    private String downloadDishImage(List<String> imageUrls, String dishName) {
+        for (int i = 0; i < imageUrls.size(); i++) {
+            String imageUrl = imageUrls.get(i);
+            if (!StringUtils.hasText(imageUrl)) {
+                log.warn("文搜图候选图片地址为空,dishName={},index={}", dishName, i);
+                continue;
+            }
+
+            ResponseEntity<byte[]> response;
+            try {
+                response = restClient.get()
+                        .uri(imageUrl)
+                        .header("Accept", "image/webp,image/apng,image/*,*/*;q=0.8")
+                        .header("User-Agent", IMAGE_DOWNLOAD_USER_AGENT)
+                        .retrieve()
+                        .toEntity(byte[].class);
+            } catch (Exception e) {
+                log.warn("文搜图候选图片下载失败,dishName={},index={},url={}", dishName, i, imageUrl, e);
+                continue;
+            }
+
+            MediaType contentType = response.getHeaders().getContentType();
+            if (!isImageContentType(contentType)) {
+                log.warn("文搜图候选地址响应非图片类型,dishName={},index={},url={},contentType={}", dishName, i, imageUrl, contentType);
+                continue;
+            }
+
+            byte[] imageBytes = response.getBody();
+            if (imageBytes == null || imageBytes.length == 0) {
+                log.warn("文搜图候选图片内容为空,dishName={},index={},url={}", dishName, i, imageUrl);
+                continue;
+            }
+
+            String extension = resolveImageExtension(contentType, imageUrl);
+            String relativePath = PathEnum.dish_img_path.getValue() + "/" + IdUtil.simpleUUID() + extension;
+            java.io.File targetDir = FileUtil.file(uploadPath, PathEnum.dish_img_path.getValue());
+            FileUtil.mkdir(targetDir);
+            java.io.File targetFile = FileUtil.file(uploadPath, relativePath);
+            FileUtil.writeBytes(imageBytes, targetFile);
+            if (!isValidDownloadedFile(targetFile)) {
+                log.warn("文搜图候选图片落盘校验失败,dishName={},index={},url={},savedPath={}", dishName, i, imageUrl, targetFile.getAbsolutePath());
+                FileUtil.del(targetFile);
+                continue;
+            }
+            log.info("文搜图下载成功,dishName={},index={},url={},savedPath={}", dishName, i, imageUrl, targetFile.getAbsolutePath());
+            return relativePath;
+        }
+
+        log.warn("文搜图所有候选地址均不可用,终止下载,dishName={}", dishName);
+        return "";
+    }
+
+    private boolean isValidDownloadedFile(java.io.File targetFile) {
+        return targetFile != null && targetFile.exists() && targetFile.isFile() && targetFile.length() > 0;
+    }
+
+    private boolean isImageContentType(MediaType mediaType) {
+        return mediaType != null && "image".equalsIgnoreCase(mediaType.getType());
     }
 
     private String resolveImageExtension(MediaType mediaType, String imageUrl) {
