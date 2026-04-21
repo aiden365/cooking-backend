@@ -353,10 +353,6 @@ public class DishApi extends BaseController {
         return JSONObject.of("type", "saved","data", JSONObject.of("dishId", dishId)).toJSONString();
     }
 
-    public static void main(String[] args) {
-
-        System.out.println(JSONObject.of("type", "error","message", "错误原因"));
-    }
 
     private Prompt buildPrompt(String dishName, String knowledgeContext) {
         String dishJsonLineString = null;

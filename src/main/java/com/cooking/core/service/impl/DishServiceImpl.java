@@ -303,6 +303,15 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         }
 
         this.saveDishToVectorStore(dishEntity);
+
+        //搜索菜品图片
+        new Thread(() -> {
+            String imagePath = searchDishImageAndDownload(dishEntity.getName());
+            if (StringUtils.hasText(imagePath)) {
+                dishEntity.setImgPath(imagePath);
+                super.updateById(dishEntity);
+            }
+        });
         return dishEntity;
     }
 
