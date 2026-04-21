@@ -25,18 +25,26 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.embedding.TokenCountBatchingStrategy;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.redis.RedisVectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisPooled;
 
 import java.text.MessageFormat;
 import java.net.http.HttpClient;
@@ -59,7 +67,6 @@ import java.util.stream.Collectors;
 public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> implements DishService {
 
     private static final String DASHSCOPE_IMAGE_API = "/compatible-mode/v1/responses";
-    private static final String DISH_IMAGE_SIZE = "1024*1024";
     private static final String IMAGE_DOWNLOAD_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
     private static final Duration DISH_IMAGE_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DISH_IMAGE_READ_TIMEOUT = Duration.ofSeconds(180);
@@ -77,6 +84,13 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private VectorStore dishVectorStore;
     @Resource(name = "qwen")
     private ChatModel qwenChatModel;
+    @Resource(name = "qwenEmbedding")
+    private EmbeddingModel qwenEmbeddingModel;
+    @Autowired
+    private JedisConnectionFactory jedisConnectionFactory;
+    @Autowired
+    private JedisPooled jedisPooled;
+
 
     @Value("${upload.path}")
     private String uploadPath;
@@ -84,6 +98,12 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private String dashscopeApiKey;
     @Value("${spring.ai.dashscope.base-url:https://dashscope.aliyuncs.com}")
     private String dashscopeBaseUrl;
+    @Value("${spring.ai.dashscope.chat.options.model}")
+    private String qwenModel;
+    @Value("${spring.ai.vectorstore.redis.dish.prefix}")
+    private String dishVectorStorePrefix;
+    @Value("${spring.ai.vectorstore.redis.dish.index-name}")
+    private String dishVectorStoreIndexName;
 
     private final RestClient restClient = createRestClient();
 
@@ -104,28 +124,184 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
     @Override
     public void saveDishToVectorStore(DishEntity dishEntity) {
+        /*FilterExpressionBuilder exprBuilder = new FilterExpressionBuilder();
+        Filter.Expression expr = exprBuilder.eq("dish_id", dishEntity.getId()).build();
+        deleteDishVectorDocuments(expr);*/
 
-        List<Document> existingDocuments = dishVectorStore.similaritySearch(SearchRequest.builder().query("").filterExpression(new FilterExpressionBuilder().eq("dish_id", dishEntity.getId().toString()).build()).build());
-        if (existingDocuments != null && !existingDocuments.isEmpty()){
-            List<String> idsToDelete = existingDocuments.stream().map(Document::getId).collect(Collectors.toList());
-            dishVectorStore.delete(idsToDelete);
-        }
-
-        /*List<DishMaterialEntity> materialEntityList = dishMaterialService.lambdaQuery().eq(DishMaterialEntity::getDishId, dishEntity.getId()).list();
-        StringBuilder sb = new StringBuilder();
-        sb.append(dishEntity.getName()).append(',');
-        sb.append(CollUtil.join(materialEntityList.stream().map(DishMaterialEntity::getMaterialName).collect(Collectors.toList()), ","));*/
+        List<DishMaterialEntity> materialEntityList = dishMaterialService.lambdaQuery().eq(DishMaterialEntity::getDishId, dishEntity.getId()).list();
+        StringBuilder searchContent = new StringBuilder();
+        searchContent.append(dishEntity.getName()).append(',');
+        searchContent.append(CollUtil.join(materialEntityList.stream().map(DishMaterialEntity::getMaterialName).collect(Collectors.toList()), ","));
 
 
         try {
             Map<String, Object> metadata = new HashMap<>();
-            metadata.put("dish_id", dishEntity.getId());
+            metadata.put("dish_id", dishEntity.getId().toString());
             metadata.put("dish_name", dishEntity.getName());
-            dishVectorStore.add(List.of(new Document(dishEntity.getId().toString(), dishEntity.getName().toString(), metadata)));
+            dishVectorStore.add(List.of(new Document(dishEntity.getId().toString(), searchContent.toString(), metadata)));
         } catch (Exception e) {
             throw new OtherException("保存向量数据库失败", e);
         }
 
+    }
+
+    private void deleteDishVectorDocuments(Filter.Expression expr) {
+        try {
+            dishVectorStore.delete(expr);
+        } catch (Exception e) {
+            if (isMissingDishVectorIndex(e)) {
+                rebuildDishVectorStoreSchema();
+                dishVectorStore.delete(expr);
+                return;
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public Map<String, Object> rebuildAllVectorStore() {
+        resetDishVectorStoreSchema();
+        List<DishEntity> dishEntities = list();
+        int rebuiltCount = 0;
+        for (DishEntity dishEntity : dishEntities) {
+            if (dishEntity == null || dishEntity.getId() == null || !StringUtils.hasText(dishEntity.getName())) {
+                continue;
+            }
+            saveDishToVectorStore(dishEntity);
+            rebuiltCount++;
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("dishCount", dishEntities.size());
+        result.put("rebuiltCount", rebuiltCount);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> diagnoseVectorStore() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("indexName", dishVectorStoreIndexName);
+        result.put("prefix", dishVectorStorePrefix);
+
+        Set<String> keys = jedisPooled.keys(dishVectorStorePrefix + "*");
+        List<String> keyList = keys == null ? Collections.emptyList() : keys.stream().sorted().toList();
+        result.put("redisKeyCount", keyList.size());
+        result.put("sampleKeys", keyList.stream().limit(5).toList());
+
+        try {
+            Map<String, Object> indexInfo = jedisPooled.ftInfo(dishVectorStoreIndexName);
+            result.put("indexInfo", simplifyIndexInfo(indexInfo));
+        } catch (Exception e) {
+            result.put("indexInfoError", e.getMessage());
+        }
+
+        List<Map<String, Object>> sampleDocuments = new ArrayList<>();
+        for (String key : keyList.stream().limit(3).toList()) {
+            Map<String, Object> sample = new LinkedHashMap<>();
+            sample.put("key", key);
+            String keyType = jedisPooled.type(key);
+            sample.put("type", keyType);
+            if ("hash".equalsIgnoreCase(keyType)) {
+                Map<String, String> raw = jedisPooled.hgetAll(key);
+                sample.put("fieldNames", raw.keySet());
+                sample.put("hasContent", raw.containsKey("content") && StringUtils.hasText(raw.get("content")));
+                sample.put("contentPreview", preview(raw.get("content")));
+                sample.put("hasEmbedding", raw.containsKey("embedding") && StringUtils.hasText(raw.get("embedding")));
+                sample.put("dishId", raw.get("dish_id"));
+                sample.put("dishName", raw.get("dish_name"));
+            }
+            sampleDocuments.add(sample);
+        }
+        result.put("sampleDocuments", sampleDocuments);
+
+        String diagnosticQuery = lambdaQuery()
+                .select(DishEntity::getName)
+                .last("limit 1")
+                .list()
+                .stream()
+                .map(DishEntity::getName)
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse("西红柿炒鸡蛋");
+        result.put("diagnosticQuery", diagnosticQuery);
+
+        SearchRequest searchRequest = SearchRequest.builder().query(diagnosticQuery).topK(5).build();
+        List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
+        result.put("similarityResultCount", documents == null ? 0 : documents.size());
+        result.put("similarityResultIds", documents == null ? Collections.emptyList() : documents.stream().map(Document::getId).toList());
+
+        return result;
+    }
+
+    private void clearDishVectorStore() {
+        String keyPattern = dishVectorStorePrefix + "*";
+        Set<String> keys = jedisPooled.keys(keyPattern);
+        if (keys != null && !keys.isEmpty()) {
+            jedisPooled.del(keys.toArray(String[]::new));
+        }
+    }
+
+    private void resetDishVectorStoreSchema() {
+        try {
+            jedisPooled.ftDropIndex(dishVectorStoreIndexName);
+        } catch (Exception e) {
+            String message = e.getMessage();
+            if (message == null || !message.toLowerCase().contains("unknown index name")) {
+                log.warn("删除菜谱向量索引失败，indexName={}", dishVectorStoreIndexName, e);
+            }
+        }
+
+        clearDishVectorStore();
+        rebuildDishVectorStoreSchema();
+    }
+
+    private void rebuildDishVectorStoreSchema() {
+        RedisVectorStore redisVectorStore = RedisVectorStore.builder(jedisPooled, qwenEmbeddingModel)
+                .initializeSchema(true)
+                .indexName(dishVectorStoreIndexName)
+                .prefix(dishVectorStorePrefix)
+                .metadataFields(
+                        RedisVectorStore.MetadataField.tag("dish_id"),
+                        RedisVectorStore.MetadataField.tag("dish_name"))
+                .batchingStrategy(new TokenCountBatchingStrategy())
+                .build();
+        redisVectorStore.afterPropertiesSet();
+    }
+
+    private boolean isMissingDishVectorIndex(Exception e) {
+        String message = e.getMessage();
+        return message != null && message.toLowerCase().contains("no such index")
+                && message.contains(dishVectorStoreIndexName);
+    }
+
+
+
+    private Map<String, Object> simplifyIndexInfo(Map<String, Object> indexInfo) {
+        if (indexInfo == null || indexInfo.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Object> simplified = new LinkedHashMap<>();
+        copyIfPresent(indexInfo, simplified, "index_name");
+        copyIfPresent(indexInfo, simplified, "num_docs");
+        copyIfPresent(indexInfo, simplified, "num_terms");
+        copyIfPresent(indexInfo, simplified, "hash_indexing_failures");
+        copyIfPresent(indexInfo, simplified, "percent_indexed");
+        copyIfPresent(indexInfo, simplified, "bytes_per_record_avg");
+        return simplified;
+    }
+
+    private void copyIfPresent(Map<String, Object> source, Map<String, Object> target, String key) {
+        if (source.containsKey(key)) {
+            target.put(key, source.get(key));
+        }
+    }
+
+    private String preview(String content) {
+        if (!StringUtils.hasText(content)) {
+            return "";
+        }
+        return content.length() <= 80 ? content : content.substring(0, 80) + "...";
     }
 
     @Override
@@ -355,7 +531,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private List<String> callDashScopeImageApi(String prompt) {
 
         JSONObject requestBody = new JSONObject();
-        requestBody.put("model", "qwen3.5-plus");
+        requestBody.put("model", qwenModel);
         requestBody.put("tools", JSONArray.of(JSONObject.of("type", "web_search_image")));
         requestBody.put("input", prompt);
 

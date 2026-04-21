@@ -59,6 +59,20 @@ public class SpringAiConfig {
     private String repositoryVectorStoreIndexName;
     @Value("${spring.ai.vectorstore.redis.repository.prefix}")
     private String repositoryVectorStorePrefix;
+    @Value("${spring.ai.dashscope.chat.options.model}")
+    private String qwenModel;
+
+    @Bean
+    public JedisPooled jedisPooled(JedisConnectionFactory jedisConnectionFactory) {
+        DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig.builder();
+        builder.ssl(jedisConnectionFactory.isUseSsl());
+        builder.clientName(jedisConnectionFactory.getClientName());
+        builder.timeoutMillis(jedisConnectionFactory.getTimeout());
+        builder.password(jedisConnectionFactory.getPassword());
+        DefaultJedisClientConfig clientConfig = builder.build();
+
+        return new JedisPooled(new HostAndPort(jedisConnectionFactory.getHostName(), jedisConnectionFactory.getPort()),clientConfig);
+    }
 
     @Bean(name = "deepseek")
     public ChatModel deepseek() {
@@ -68,22 +82,21 @@ public class SpringAiConfig {
 
     @Bean(name = "qwen")
     public ChatModel qwen() {
-        return DashScopeChatModel.builder().dashScopeApi(DashScopeApi.builder().apiKey(dashscopeApiKey).build()).defaultOptions(DashScopeChatOptions.builder().model("qwen-plus").build()).build();
+        return DashScopeChatModel.builder().dashScopeApi(DashScopeApi.builder().apiKey(dashscopeApiKey).build()).defaultOptions(DashScopeChatOptions.builder().model(qwenModel).build()).build();
     }
 
 
     @Bean(name = "qwenEmbedding")
     public EmbeddingModel qwenEmbedding() {
         return DashScopeEmbeddingModel.builder().dashScopeApi(DashScopeApi.builder().apiKey(dashscopeApiKey).build())
-                .defaultOptions(DashScopeEmbeddingOptions.builder().model("text-embedding-v3")
-                        .dimensions(QWEN_EMBEDDING_DIMENSIONS).build())
+                .defaultOptions(DashScopeEmbeddingOptions.builder().dimensions(QWEN_EMBEDDING_DIMENSIONS).model("text-embedding-v3").build())
                 .build();
     }
 
     @Bean(name = "ollamaQwen")
     public ChatModel ollamaQwen() {
         return OllamaChatModel.builder().ollamaApi(OllamaApi.builder().baseUrl(ollamaBaseUrl).build())
-                .defaultOptions(OllamaChatOptions.builder().model(ollamaModel).numCtx(1024).build()).build();
+                .defaultOptions(OllamaChatOptions.builder().model(ollamaModel).build()).build();
 
     }
 
@@ -99,11 +112,9 @@ public class SpringAiConfig {
     }
 
     @Bean(name = "dishVectorStore")
-    public VectorStore dishVectorStore(JedisConnectionFactory jedisConnectionFactory,
-            @Qualifier("qwenEmbedding") EmbeddingModel embeddingModel) {
-        JedisPooled jedisPooled = jedisPooled(jedisConnectionFactory);
-        boolean recreatedByDimensionMismatch = ensureVectorIndexDimension(jedisPooled, dishVectorStoreIndexName,
-                QWEN_EMBEDDING_DIMENSIONS);
+    public VectorStore dishVectorStore(@Qualifier("qwenEmbedding") EmbeddingModel embeddingModel, @Qualifier("jedisPooled") JedisPooled jedisPooled) {
+
+        boolean recreatedByDimensionMismatch = ensureVectorIndexDimension(jedisPooled, dishVectorStoreIndexName,QWEN_EMBEDDING_DIMENSIONS);
         RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled, embeddingModel);
         // 维度不一致时即使全局开关为 false，也要重建索引并基于现有 document 重新索引。
         builder.initializeSchema(Boolean.TRUE.equals(vectorStoreInitializeSchema) || recreatedByDimensionMismatch);
@@ -113,14 +124,36 @@ public class SpringAiConfig {
                 RedisVectorStore.MetadataField.tag("dish_id"),
                 RedisVectorStore.MetadataField.tag("dish_name"));
         builder.batchingStrategy(new TokenCountBatchingStrategy());
+        RedisVectorStore vectorStore = builder.build();
 
-        return builder.build();
+        try {
+            vectorStore.afterPropertiesSet();
+            log.info("dishVectorStore.afterPropertiesSet success, indexName={}, prefix={}, initializeSchema={}, recreatedByDimensionMismatch={}",
+                    dishVectorStoreIndexName, dishVectorStorePrefix, Boolean.TRUE.equals(vectorStoreInitializeSchema), recreatedByDimensionMismatch);
+        } catch (Exception e) {
+            log.error("dishVectorStore.afterPropertiesSet failed, indexName={}, prefix={}, initializeSchema={}, recreatedByDimensionMismatch={}",
+                    dishVectorStoreIndexName, dishVectorStorePrefix, Boolean.TRUE.equals(vectorStoreInitializeSchema), recreatedByDimensionMismatch, e);
+            throw e;
+        }
+
+        try {
+            log.info("dishVectorStore ftList after init: {}", jedisPooled.ftList());
+        } catch (Exception e) {
+            log.warn("dishVectorStore ftList failed after init, indexName={}", dishVectorStoreIndexName, e);
+        }
+
+        try {
+            log.info("dishVectorStore ftInfo after init, indexName={}, info={}", dishVectorStoreIndexName,
+                    jedisPooled.ftInfo(dishVectorStoreIndexName));
+        } catch (Exception e) {
+            log.warn("dishVectorStore ftInfo failed after init, indexName={}", dishVectorStoreIndexName, e);
+        }
+
+        return vectorStore;
     }
 
     @Bean(name = "repositoryVectorStore")
-    public VectorStore repositoryVectorStore(JedisConnectionFactory jedisConnectionFactory,
-            @Qualifier("qwenEmbedding") EmbeddingModel embeddingModel) {
-        JedisPooled jedisPooled = jedisPooled(jedisConnectionFactory);
+    public VectorStore repositoryVectorStore(@Qualifier("qwenEmbedding") EmbeddingModel embeddingModel, @Qualifier("jedisPooled") JedisPooled jedisPooled) {
         boolean recreatedByDimensionMismatch = ensureVectorIndexDimension(jedisPooled, repositoryVectorStoreIndexName, QWEN_EMBEDDING_DIMENSIONS);
         RedisVectorStore.Builder builder = RedisVectorStore.builder(jedisPooled, embeddingModel);
         // 维度不一致时即使全局开关为 false，也要重建索引并基于现有 document 重新索引。
@@ -137,17 +170,7 @@ public class SpringAiConfig {
         return builder.build();
     }
 
-    private JedisPooled jedisPooled(JedisConnectionFactory jedisConnectionFactory) {
-        DefaultJedisClientConfig.Builder builder = DefaultJedisClientConfig.builder();
-        builder.ssl(jedisConnectionFactory.isUseSsl());
-        builder.clientName(jedisConnectionFactory.getClientName());
-        builder.timeoutMillis(jedisConnectionFactory.getTimeout());
-        builder.password(jedisConnectionFactory.getPassword());
-        DefaultJedisClientConfig clientConfig = builder.build();
 
-        return new JedisPooled(new HostAndPort(jedisConnectionFactory.getHostName(), jedisConnectionFactory.getPort()),
-                clientConfig);
-    }
 
     private boolean ensureVectorIndexDimension(JedisPooled jedisPooled, String indexName, int expectedDimension) {
         try {

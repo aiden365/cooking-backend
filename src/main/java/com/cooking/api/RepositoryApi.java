@@ -104,7 +104,7 @@ public class RepositoryApi extends BaseController {
         return ok();
     }
 
-    @PostMapping("rebuildVectorStore")
+    @RequestMapping("rebuildVectorStore")
     public BaseResponse rebuildVectorStore() {
         return ok(repositoryService.rebuildAllVectorStore());
     }

@@ -113,7 +113,7 @@ public class DishApi extends BaseController {
     @PostMapping("page")
     public BaseResponse page(@RequestBody JSONObject params) {
         String search = params.getString("search");
-        List<Long> dishIds = params.getList("dishId", Long.class);
+        List<Long> dishIds = params.getList("dishIds", Long.class);
         Long labelId = params.getLong("labelId");
         Integer checkStatus = params.getInteger("checkStatus");
         Map<String, Object> queryParams = new HashMap<>();
@@ -163,10 +163,59 @@ public class DishApi extends BaseController {
     @PostMapping("search")
     public BaseResponse search(@RequestBody JSONObject params) {
         String search = params.getString("search");
-        SearchRequest searchRequest = SearchRequest.builder().query(search).topK(5).build();
-        List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
+        if (!StringUtils.hasText(search)) {
+            List<Long> dishIds = dishService.lambdaQuery()
+                    .orderByDesc(BaseEntity::getCreateTime)
+                    .list()
+                    .stream()
+                    .map(BaseEntity::getId)
+                    .filter(Objects::nonNull)
+                    .toList();
+            return ok(dishIds);
+        }
 
-        return ok(documents);
+        SearchRequest searchRequest = SearchRequest.builder().query(search).topK(10).build();
+        List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
+        LinkedHashSet<Long> dishIds = new LinkedHashSet<>();
+        if (documents != null) {
+            for (Document document : documents) {
+                if (document == null || !StringUtils.hasText(document.getId())) {
+                    continue;
+                }
+                try {
+                    dishIds.add(Long.parseLong(document.getId()));
+                } catch (NumberFormatException e) {
+                    Object dishId = document.getMetadata() == null ? null : document.getMetadata().get("dish_id");
+                    if (dishId != null && StringUtils.hasText(dishId.toString())) {
+                        dishIds.add(Long.parseLong(dishId.toString()));
+                    }
+                }
+            }
+        }
+
+        if (dishIds.isEmpty()) {
+            List<Long> fallbackIds = dishService.lambdaQuery()
+                    .like(DishEntity::getName, search)
+                    .orderByDesc(BaseEntity::getCreateTime)
+                    .list()
+                    .stream()
+                    .map(BaseEntity::getId)
+                    .filter(Objects::nonNull)
+                    .toList();
+            return ok(fallbackIds);
+        }
+
+        return ok(new ArrayList<>(dishIds));
+    }
+
+    @RequestMapping("rebuildVectorStore")
+    public BaseResponse rebuildVectorStore() {
+        return ok(dishService.rebuildAllVectorStore());
+    }
+
+    @RequestMapping("vectorStoreDiagnostics")
+    public BaseResponse vectorStoreDiagnostics() {
+        return ok(dishService.diagnoseVectorStore());
     }
 
     @PostMapping("detail")

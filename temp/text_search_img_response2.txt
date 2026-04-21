@@ -1,0 +1,97 @@
+{
+    "created_at": 1776783521,
+    "id": "resp_8ab6573a-668d-93f8-bf5e-9a3a97cc9a34",
+    "model": "qwen3.5-plus",
+    "object": "response",
+    "output": [
+        {
+            "id": "msg_6c4de845-63c7-42ac-a689-9ba25871d126",
+            "summary": [
+                {
+                    "text": "用户想要一张西红柿鸡蛋面的菜品照片。我需要使用 web_search_image 功能来搜索相关图片。\n\n用户说的是中文\"西红柿鸡蛋面\"，这是中国的一道常见面食。我应该用中文或英文来搜索。让我用中文搜索可能会得到更好的结果。\n",
+                    "type": "summary_text"
+                }
+            ],
+            "type": "reasoning"
+        },
+        {
+            "arguments": "{\"queries\": [\"西红柿鸡蛋面\", \"tomato egg noodles\", \"番茄鸡蛋面\"]}",
+            "id": "msg_d7b725a3-3816-4913-a12d-23fd62632386",
+            "name": "web_search_image",
+            "output": "[{\"title\": \"番茄鸡蛋面🍜 做法跟图步骤～ #fblifestyle\", \"url\": \"https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=871600015749098\", \"index\": 1}, {\"title\": \"西红柿鸡蛋面_百度百科\", \"url\": \"https://bkimg.cdn.bcebos.com/smart/bd3eb13533fa828ba61e3899fa465634970a304eec0a-bkimg-process,v_1,rw_1,rh_1,pad_1,color_ffffff?x-bce-process=image/format,f_auto\", \"index\": 2}, {\"title\": \"西红柿鸡蛋面怎么做_西红柿鸡蛋面的做法_豆果美食\", \"url\": \"https://cp1.douguo.com/upload/caiku/1/d/0/750_1d00f2b2ab3a1ddba592eec176d4a730.jpg\", \"index\": 3}, {\"title\": \"宝宝最爱吃的西红柿鸡蛋面，这样做，再来一碗也不够吃_搜狐网\", \"url\": \"https://p8.itc.cn/images01/20220718/99f241f46e9d4b50998a9e38ff779b70.jpeg\", \"index\": 4}, {\"title\": \"西红柿鸡蛋面新吃的做法_简单几步教你做出整齐漂亮的面条 ...\", \"url\": \"https://i3.meishichina.com/atta/recipe/2012/01/06/201201061250307.jpg?x-oss-process=style/p800\", \"index\": 5}, {\"title\": \"西红柿鸡蛋面素材图片下载-素材编号13222547-素材天下图库\", \"url\": \"https://pic7.sucaisucai.com/13/22/13222547_2.jpg\", \"index\": 6}, {\"title\": \"留学生的私家小厨房：听说你还不会做番茄鸡蛋面？ – 圣地亚哥 ...\", \"url\": \"https://sdfoodguide.com/wp-content/uploads/2017/09/829E9873-B1BD-46D6-86B7-F9ACE0145CBB-678x381.jpg\", \"index\": 7}, {\"title\": \"西红柿鸡蛋面的做法_西红柿鸡蛋面怎么做_猪超可爱的菜谱_美食天下\", \"url\": \"https://i3.meishichina.com/atta/recipe/2016/06/27/2016062714669939972331416632.jpg?x-oss-process=style/p800\", \"index\": 8}, {\"title\": \"步骤图】西红柿鸡蛋汤面的做法_西红柿鸡蛋汤面的做法步骤_菜谱_ ...\", \"url\": \"https://i2.chuimg.com/06b15dd2946a4a95b223790b11a8f8f9_1922w_2560h.jpg?imageView2/1/w/640/h/520/q/75/format/jpg\", \"index\": 9}, {\"title\": \"西红柿鸡蛋面怎么做？西红柿鸡蛋面商业配方工艺，西红柿鸡蛋面 ...\", \"url\": \"http://www.shaojianwang.com/file/upload/202110/10/14570111774.jpg\", \"index\": 10}, {\"title\": \"Chinese Tomato and Egg Noodles\", \"url\": \"https://i.imgur.com/JcL75oG.jpg\", \"index\": 11}, {\"title\": \"Tomato and Egg Noodles\", \"url\": \"https://static01.nyt.com/images/2025/10/08/multimedia/hlm-tomato-and-egg-noodles-mqlc/hlm-tomato-and-egg-noodles-mqlc-mediumSquareAt3X.jpg\", \"index\": 12}, {\"title\": \"Tomato and egg noodle soup\", \"url\": \"https://images.services.kitchenstories.io/pv72CkKpvR3PjVixLZtwqylZNJQ=/3840x0/filters:quality(85)/images.kitchenstories.io/wagtailOriginalImages/R2417-photo-final-1.jpg\", \"index\": 13}, {\"title\": \"Tomato Egg Noodles\", \"url\": \"https://tarasmulticulturaltable.com/wp-content/uploads/2023/07/Tomato-Egg-Noodles-2-of-3.jpg\", \"index\": 14}, {\"title\": \"Taiwanese-Style Tomato and Egg Noodles\", \"url\": \"https://www.saveur.com/uploads/2020/12/29/ADZ7URX7RBHTRJ77KJK4EGNQUU.jpg?auto=webp\", \"index\": 15}, {\"title\": \"Chinese Tomato and Egg Noodle Soup (番茄鸡蛋面汤)\", \"url\": \"https://c4.staticflickr.com/9/8754/29662879411_77e370de39_b.jpg\", \"index\": 16}, {\"title\": \"Creamy Tomato Egg Noodles\", \"url\": \"https://ohmyveggies.com/wp-content/uploads/2019/05/Savory-Tomato-Egg-noodles-2-scaled.jpg\", \"index\": 17}, {\"title\": \"Tomato Egg Noodle Soup\", \"url\": \"http://www.yireservation.com/wp-content/uploads/2020/06/tomato-egg-noodles-recipe_sm.jpg\", \"index\": 18}, {\"title\": \"Tomato Egg Noodles\", \"url\": \"https://cookingwithlei.com/wp-content/uploads/2023/12/tomato-egg-noodles.jpg\", \"index\": 19}, {\"title\": \"Chinese Tomato and Egg Noodle Soup\", \"url\": \"https://noodlecrave.com/wp-content/uploads/2022/11/tomato-egg-soup-noodle-featured.jpg\", \"index\": 20}, {\"title\": \"留学生的私家小厨房：听说你还不会做番茄鸡蛋面？ – 圣地亚哥 ...\", \"url\": \"https://sdfoodguide.com/wp-content/uploads/2017/09/829E9873-B1BD-46D6-86B7-F9ACE0145CBB-678x381.jpg\", \"index\": 21}, {\"title\": \"番茄鸡蛋面，做法简单，好吃又营养。 #番茄鸡蛋面 #面条 #懒人版面条做法 , #相機食先 #美食 #homecooking #recipe  #foodstagram #dinner #breakfast #foodgasm #lovrfood #sweet #lunch #foodporn  #foodie #recipes, #chinesefood #yummyfood #toptags ...\", \"url\": \"https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3324785392681331639\", \"index\": 22}, {\"title\": \"快手西红柿鸡蛋面| 社区美食精选\", \"url\": \"https://imgcache.dealmoon.com/fsvrugccache.dealmoon.com/ugc/151/d83/640/d23d9ad84211d3b95e580b3.jpg_1280_1280_3_c796.jpg\", \"index\": 23}, {\"title\": \"康师傅方便面经典番茄鸡蛋牛肉味115*1袋- Weee!\", \"url\": \"https://img06.weeecdn.com/item/image/239/632/39DE9AD8C7CCAAB6.webp\", \"index\": 24}, {\"title\": \"食譜[番茄雞蛋麵]添加一食材讓人驚艷- 家常菜簡單料理- udn部落格\", \"url\": \"https://g.udn.com.tw/upfiles/B_MY/myblog/PSN_PHOTO/947/f_28489947_1.JPG\", \"index\": 25}, {\"title\": \"番茄鸡蛋面最经典做法，很多人都做错了，掌握这几点，太香了 ...\", \"url\": \"https://i.ytimg.com/vi/ra6wRP4N_z8/sddefault.jpg\", \"index\": 26}, {\"title\": \"超简单的番茄鸡蛋面，酸甜开胃，味道鲜美，适合大家_搜狐网\", \"url\": \"http://5b0988e595225.cdn.sohucs.com/images/20190818/f68b2220d06d46118ff779931485a222.jpeg\", \"index\": 27}, {\"title\": \"西红柿鸡蛋面图片素材下载-食品餐饮素材下的小吃美食图片素材-汇图网\", \"url\": \"https://pic.huitu.com/res/20250524/3169584_20250524005413451238_1.jpg\", \"index\": 28}, {\"title\": \"西红柿鸡蛋面怎么做_西红柿鸡蛋面的做法_豆果美食\", \"url\": \"https://cp1.douguo.com/upload/caiku/1/d/0/750_1d00f2b2ab3a1ddba592eec176d4a730.jpg\", \"index\": 29}, {\"title\": \"西红柿鸡蛋面素材图片下载-素材编号13222547-素材天下图库\", \"url\": \"https://pic7.sucaisucai.com/13/22/13222547_2.jpg\", \"index\": 30}]",
+            "status": "completed",
+            "type": "web_search_image_call"
+        },
+        {
+            "id": "msg_19d6cea6-0815-4cf1-8b7b-a10a06deb21b",
+            "summary": [
+                {
+                    "text": "好的，我找到了很多西红柿鸡蛋面的照片。现在我可以给用户展示这些图片。让我选择几张看起来不错的图片来展示。",
+                    "type": "summary_text"
+                }
+            ],
+            "type": "reasoning"
+        },
+        {
+            "content": [
+                {
+                    "annotations": [],
+                    "text": "我为您找到了多张西红柿鸡蛋面的美食照片！以下是几张精美的图片：\n\n**第一张：** 来自百度百科 - 传统的西红柿鸡蛋面，配有青菜点缀\n![西红柿鸡蛋面](https://bkimg.cdn.bcebos.com/smart/bd3eb13533fa828ba61e3899fa465634970a304eec0a-bkimg-process,v_1,rw_1,rh_1,pad_1,color_ffffff?x-bce-process=image/format,f_auto)\n\n**第二张：** 来自豆果美食 - 清新的家常做法，上面撒有香菜\n![西红柿鸡蛋面](https://cp1.douguo.com/upload/caiku/1/d/0/750_1d00f2b2ab3a1ddba592eec176d4a730.jpg)\n\n**第三张：** 专业摄影作品 - 色泽诱人，汤汁浓郁\n![西红柿鸡蛋面](https://pic7.sucaisucai.com/13/22/13222547_2.jpg)\n\n**第四张：** 来自下厨房 - 摆盘精美，配有青菜装饰\n![西红柿鸡蛋面](https://i2.chuimg.com/06b15dd2946a4a95b223790b11a8f8f9_1922w_2560h.jpg?imageView2/1/w/640/h/520/q/75/format/jpg)\n\n**第五张：** 来自 Kitchen Stories - 国际视角的西红柿鸡蛋面\n![西红柿鸡蛋面](https://images.services.kitchenstories.io/pv72CkKpvR3PjVixLZtwqylZNJQ=/3840x0/filters:quality(85)/images.kitchenstories.io/wagtailOriginalImages/R2417-photo-final-1.jpg)\n\n这些照片展示了不同风格的西红柿鸡蛋面，从传统家常到精致摆盘都有。这道菜色泽红黄相间，看起来非常诱人！",
+                    "type": "output_text"
+                }
+            ],
+            "id": "msg_8a2bd3ff-97c5-4bd6-a2e1-b544ca0b899b",
+            "role": "assistant",
+            "status": "completed",
+            "type": "message"
+        }
+    ],
+    "parallel_tool_calls": false,
+    "status": "completed",
+    "tool_choice": "auto",
+    "tools": [
+        {
+            "name": "web_search_image",
+            "type": "custom"
+        }
+    ],
+    "usage": {
+        "input_tokens": 13229,
+        "input_tokens_details": {
+            "cached_tokens": 0
+        },
+        "output_tokens": 648,
+        "output_tokens_details": {
+            "reasoning_tokens": 85
+        },
+        "total_tokens": 13877,
+        "x_details": [
+            {
+                "image_tokens": 11308,
+                "input_tokens": 13229,
+                "input_tokens_details": {
+                    "image_tokens": 11308,
+                    "text_tokens": 1921
+                },
+                "output_tokens": 648,
+                "output_tokens_details": {
+                    "reasoning_tokens": 85,
+                    "text_tokens": 563
+                },
+                "plugins": {
+                    "web_search_image": {
+                        "count": 1
+                    }
+                },
+                "prompt_tokens_details": {},
+                "total_tokens": 13877,
+                "x_billing_type": "response_api"
+            }
+        ],
+        "x_tools": {
+            "web_search_image": {
+                "count": 1
+            }
+        }
+    }
+}
