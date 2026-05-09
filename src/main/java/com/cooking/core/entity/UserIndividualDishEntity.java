@@ -47,5 +47,5 @@ public class UserIndividualDishEntity extends BaseEntity {
     private String dishName;
 
     @TableField(exist = false)
-    private String dishImg;
+    private String imgPath;
 }

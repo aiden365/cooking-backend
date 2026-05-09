@@ -96,7 +96,7 @@ public class UserIndividualDishApi extends BaseController {
         for (UserIndividualDishEntity entity : entityIPage.getRecords()) {
             DishEntity dishEntity = dishEntityMap.get(entity.getDishId());
             entity.setDishName(dishEntity == null ? "" : dishEntity.getName());
-            entity.setDishImg(dishEntity == null ? "" : dishEntity.getImgPath());
+            entity.setImgPath(dishEntity == null ? "" : dishEntity.getImgPath());
         }
 
         return ok(entityIPage);
@@ -159,7 +159,7 @@ public class UserIndividualDishApi extends BaseController {
             userIndividualDishService.saveOrUpdate(entity);
 
             entity.setDishName(dishEntity.getName());
-            entity.setDishImg(dishEntity.getImgPath());
+            entity.setImgPath(dishEntity.getImgPath());
         };
 
 

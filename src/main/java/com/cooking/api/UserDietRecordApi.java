@@ -247,9 +247,9 @@ public class UserDietRecordApi extends BaseController {
     }
 
     @RequestMapping("aigc")
-    public Flux<String> aigc(/*@RequestBody JSONObject params*/) {
-        List<Long> labelIds = labelService.lambdaQuery().in(LabelEntity::getLabelName, Arrays.asList("减脂餐", "月经期")).list().stream().map(BaseEntity::getId).toList();
-        /*List<Long> labelIds = params.getList("labelIds", Long.class);*/
+    public Flux<String> aigc(@RequestBody JSONObject params) {
+        /*List<Long> labelIds = labelService.lambdaQuery().in(LabelEntity::getLabelName, Arrays.asList("减脂餐", "月经期")).list().stream().map(BaseEntity::getId).toList();*/
+        List<Long> labelIds = params.getList("labelIds", Long.class);
         UserEntity currentUser = SystemContextHelper.getCurrentUser();
         Long userId = currentUser.getId();
 

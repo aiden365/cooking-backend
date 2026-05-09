@@ -16,7 +16,7 @@
 每个步骤单独输出一行：
 {"type":"step","data":{"stepNumber":1,"instruction":"具体动作"}}
 
-### 6. 贴士行
+### 6. 贴士行 请注意 这一行中的 data 是一个字符串
 {"type":"tips","data":"制作建议"}
 
 ### 7. 结束行
