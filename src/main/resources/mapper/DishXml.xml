@@ -16,10 +16,34 @@
         <if test="params.checkStatus != null and params.checkStatus != ''">
             and check_status = #{params.checkStatus}
         </if>
+        <if test="params.withVideo != null and params.withVideo == true">
+            and videoPath is not null
+        </if>
 
         <if test="params.labelId != null and params.labelId != '' and params.labelId != 0">
             and exists(select 1 from tbl_dish_label_rel where dish_id = tbl_dish.id and label_id = #{params.labelId})
         </if>
-        order by create_time desc
+
+
+        <choose>
+            <when test="(params.sortBy != null and params.sortBy != '') and (params.sortMethod != null and params.sortMethod != '')">
+                order by
+                <choose>
+                    <when test="params.sortBy == 'time'">create_time</when>
+                    <when test="params.sortBy == 'activity'">active_val</when>
+                    <when test="params.sortBy == 'popular_val'">popular_val</when>
+                    <otherwise>create_time</otherwise>
+                </choose>
+                <choose>
+                    <when test="params.sortMethod == 'asc' or params.sortMethod == 'ASC'">asc</when>
+                    <otherwise>desc</otherwise>
+                </choose>
+            </when>
+            <otherwise>
+                order by create_time desc
+            </otherwise>
+        </choose>
+
+
     </select>
 </mapper>

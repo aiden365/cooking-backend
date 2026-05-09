@@ -1,6 +1,7 @@
 package com.cooking.api;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -61,6 +62,17 @@ import java.util.stream.Collectors;
 @RequestMapping("dish")
 public class DishApi extends BaseController {
 
+    private static final String DISH_SEARCH_TEXT_PROMPT = """
+            你是菜谱检索词整理助手。
+            请根据用户输入的菜名或搜索词，生成一行适合向量检索的结构化文本。
+            只输出一行结果，不要解释，不要换行。
+            固定格式：
+            菜名: xxx; 食材: xxx; 调味: xxx
+            如果无法确定某项，填“未知”。
+            用户输入：
+            {0}
+            """;
+
     @Autowired
     private DishService dishService;
     @Autowired
@@ -116,11 +128,18 @@ public class DishApi extends BaseController {
         List<Long> dishIds = params.getList("dishIds", Long.class);
         Long labelId = params.getLong("labelId");
         Integer checkStatus = params.getInteger("checkStatus");
+        Boolean withVideo = params.getBoolean("withVideo");
+        String sortBy = params.getString("sortBy");
+        String sortMethod = params.getString("sortMethod");
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("search", search);
         queryParams.put("dishIds", dishIds);
         queryParams.put("labelId", labelId);
         queryParams.put("checkStatus", checkStatus);
+        queryParams.put("withVideo", withVideo);
+        queryParams.put("sortBy", sortBy);
+        queryParams.put("sortMethod", sortMethod);
+
 
         IPage<DishEntity> dishEntityPage = dishService.findPage(new Page<>(pageNo, pageSize), queryParams);
         List<Long> dishEntityIds = dishEntityPage.getRecords().stream().map(BaseEntity::getId).toList();
@@ -162,7 +181,7 @@ public class DishApi extends BaseController {
 
     @PostMapping("search")
     public BaseResponse search(@RequestBody JSONObject params) {
-        String search = params.getString("search");
+        String search = params.getString("dishName");
         if (!StringUtils.hasText(search)) {
             List<Long> dishIds = dishService.lambdaQuery()
                     .orderByDesc(BaseEntity::getCreateTime)
@@ -174,7 +193,13 @@ public class DishApi extends BaseController {
             return ok(dishIds);
         }
 
-        SearchRequest searchRequest = SearchRequest.builder().query(search).similarityThreshold(0.8f).topK(5).build();
+        String normalizedSearch = search.trim();
+        String retrievalText = buildDishSearchText(normalizedSearch);
+        SearchRequest searchRequest = SearchRequest.builder()
+                .query(retrievalText)
+                .similarityThreshold(0.88f)
+                .topK(8)
+                .build();
         List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
         LinkedHashSet<Long> dishIds = new LinkedHashSet<>();
         if (documents != null) {
@@ -195,7 +220,7 @@ public class DishApi extends BaseController {
 
         if (dishIds.isEmpty()) {
             List<Long> fallbackIds = dishService.lambdaQuery()
-                    .like(DishEntity::getName, search)
+                    .like(DishEntity::getName, normalizedSearch)
                     .orderByDesc(BaseEntity::getCreateTime)
                     .list()
                     .stream()
@@ -206,6 +231,31 @@ public class DishApi extends BaseController {
         }
 
         return ok(new ArrayList<>(dishIds));
+    }
+
+    private String buildDishSearchText(String search) {
+        String fallbackText = buildDishSearchFallbackText(search);
+        try {
+            String response = chatModel.call(MessageFormat.format(DISH_SEARCH_TEXT_PROMPT, search));
+            if (StringUtils.hasText(response)) {
+                return response.trim();
+            }
+        } catch (Exception e) {
+            log.warn("生成菜谱检索文本失败，使用兜底文本,search={}", search, e);
+        }
+        return fallbackText;
+    }
+
+    private String buildDishSearchFallbackText(String search) {
+        String mainMaterial = inferMainMaterial(search);
+        return "菜名: " + search
+                + "; 食材: " + mainMaterial
+                + "; 调味: 未知";
+    }
+
+    private String inferMainMaterial(String search) {
+        List<String> candidates = List.of("排骨", "大虾", "虾", "鸡", "鸡翅", "鸡腿", "牛肉", "羊肉", "猪肉", "鱼", "豆腐", "土豆", "茄子", "西红柿", "鸡蛋");
+        return candidates.stream().filter(search::contains).findFirst().orElse("未知");
     }
 
     @RequestMapping("rebuildVectorStore")
@@ -338,17 +388,27 @@ public class DishApi extends BaseController {
     public BaseResponse verifyName(@RequestBody JSONObject params) {
         String dishName = params.getString("dishName");
         if(StrUtil.isNotBlank(dishName)){
-            String res = ollamaQwen.call(MessageFormat.format("请验证下这是否是一个合法的菜名，只需回答是或不是。名称为：{0}", dishName));
+            String res = chatModel.call(MessageFormat.format("请验证下这是否是一个合法的菜名，只需回答true或false。名称为：{0}", dishName));
+            return ok(BooleanUtil.toBoolean(res));
         }
-        return ok(true);
+        return ok(BooleanUtil.toBoolean("false"));
     }
 
     /**
      * AI生成并保存菜谱
      */
+    @RequestMapping("aigc2")
+    public Flux<String> aigc2(String params) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("dishName", params);
+        return this.aigc(jsonObject);
+    }
+    /**
+     * AI生成并保存菜谱
+     */
     @RequestMapping("aigc")
-    public Flux<String> aigc(String dishName) {
-        /*String dishName = params.getString("dishName");*/
+    public Flux<String> aigc(@RequestBody JSONObject params) {
+        String dishName = params.getString("dishName");
         if (!StringUtils.hasText(dishName)) {
             throw new ApiException(BaseResponse.Code.fail.code, "dishName不能为空");
         }
@@ -385,7 +445,7 @@ public class DishApi extends BaseController {
             }
             if (AiResponseUtils.isCompleteJsonObject(lastLine)) {
                 buffer.setLength(0);
-                return Flux.just(lastLine);
+                return Flux.just(lastLine + "\n");
             }
             return Flux.empty();
         });
@@ -399,7 +459,7 @@ public class DishApi extends BaseController {
     }
 
     private String buildSavedMessage(Long dishId) {
-        return JSONObject.of("type", "saved","data", JSONObject.of("dishId", dishId)).toJSONString();
+        return JSONObject.of("type", "saved","data", JSONObject.of("dishId", dishId)).toJSONString() + "\n";
     }
 
 

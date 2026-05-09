@@ -228,9 +228,9 @@ public class UserIndividualDishApi extends BaseController {
             throw new RuntimeException(e);
         }
         String knowledgeContext = retrieveKnowledgeContext(null);
+        knowledgeContext = StringUtils.hasText(knowledgeContext) ? knowledgeContext : "请参照用户给出的菜谱信息生成";
 
-
-        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", JSONObject.of("type", "error","message", "错误原因")));
+        Message systemMessage = new SystemPromptTemplate(systemPrompt).createMessage(Map.of("dishJSONLine", dishJsonLineString, "aiFailJson", JSONObject.of("type", "error","message", "错误原因"), "knowledgeContext",knowledgeContext));
         Map<String, Object> userParams = new HashMap<>();
         userParams.put("dishName", dishEntity.getName());
         userParams.put("preferences", buildDietaryPreferenceText(labels));

@@ -71,6 +71,16 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private static final Duration DISH_IMAGE_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DISH_IMAGE_READ_TIMEOUT = Duration.ofSeconds(180);
     private static final Pattern MARKDOWN_IMAGE_PATTERN = Pattern.compile("!\\[[^\\]]*]\\((https?://[^)\\s]+)\\)");
+    private static final String DISH_VECTOR_TEXT_PROMPT = """
+            你是菜谱检索文本整理助手。
+            请根据给定的菜谱信息，生成一行适合向量检索的结构化文本。
+            只输出一行结果，不要解释，不要换行。
+            固定格式：
+            菜名: xxx; 食材: xxx; 调味: xxx
+            如果无法确定某项，填“未知”。
+            菜谱信息：
+            {0}
+            """;
 
     @Autowired
     private DishMapper dishMapper;
@@ -83,7 +93,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     @Resource(name = "dishVectorStore")
     private VectorStore dishVectorStore;
     @Resource(name = "qwen")
-    private ChatModel qwenChatModel;
+    private ChatModel chatModel;
     @Resource(name = "qwenEmbedding")
     private EmbeddingModel qwenEmbeddingModel;
     @Autowired
@@ -124,25 +134,59 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
 
     @Override
     public void saveDishToVectorStore(DishEntity dishEntity) {
-        /*FilterExpressionBuilder exprBuilder = new FilterExpressionBuilder();
-        Filter.Expression expr = exprBuilder.eq("dish_id", dishEntity.getId()).build();
-        deleteDishVectorDocuments(expr);*/
+        FilterExpressionBuilder exprBuilder = new FilterExpressionBuilder();
+        Filter.Expression expr = exprBuilder.eq("dish_id", dishEntity.getId().toString()).build();
+        deleteDishVectorDocuments(expr);
 
-        List<DishMaterialEntity> materialEntityList = dishMaterialService.lambdaQuery().eq(DishMaterialEntity::getDishId, dishEntity.getId()).list();
-        StringBuilder searchContent = new StringBuilder();
-        searchContent.append(dishEntity.getName()).append(',');
-        searchContent.append(CollUtil.join(materialEntityList.stream().map(DishMaterialEntity::getMaterialName).collect(Collectors.toList()), ","));
-
+        List<DishMaterialEntity> materialEntityList = dishMaterialService.lambdaQuery()
+                .eq(DishMaterialEntity::getDishId, dishEntity.getId())
+                .list();
+        List<DishFlavorEntity> flavorEntityList = dishFlavorService.lambdaQuery()
+                .eq(DishFlavorEntity::getDishId, dishEntity.getId())
+                .list();
+        String retrievalText = buildDishVectorText(dishEntity, materialEntityList, flavorEntityList);
 
         try {
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("dish_id", dishEntity.getId().toString());
             metadata.put("dish_name", dishEntity.getName());
-            dishVectorStore.add(List.of(new Document(dishEntity.getId().toString(), searchContent.toString(), metadata)));
+            dishVectorStore.add(List.of(new Document(dishEntity.getId().toString(), retrievalText, metadata)));
         } catch (Exception e) {
             throw new OtherException("保存向量数据库失败", e);
         }
 
+    }
+
+    private String buildDishVectorText(DishEntity dishEntity, List<DishMaterialEntity> materialEntityList,
+            List<DishFlavorEntity> flavorEntityList) {
+        String fallbackText = buildDishVectorFallbackText(dishEntity, materialEntityList, flavorEntityList);
+        String promptInput = """
+                菜名: %s
+                食材: %s
+                调味: %s
+                """.formatted(
+                defaultText(dishEntity == null ? null : dishEntity.getName()),
+                joinMaterials(materialEntityList),
+                joinFlavors(flavorEntityList));
+        try {
+            String response = chatModel.call(MessageFormat.format(DISH_VECTOR_TEXT_PROMPT, promptInput));
+            if (StringUtils.hasText(response)) {
+                return response.trim();
+            }
+        } catch (Exception e) {
+            log.warn("生成菜谱向量检索文本失败，使用兜底文本,dishId={}", dishEntity == null ? null : dishEntity.getId(), e);
+        }
+        return fallbackText;
+    }
+
+    private String buildDishVectorFallbackText(DishEntity dishEntity, List<DishMaterialEntity> materialEntityList,
+            List<DishFlavorEntity> flavorEntityList) {
+        String name = defaultText(dishEntity == null ? null : dishEntity.getName());
+        String materials = joinMaterials(materialEntityList);
+        String flavors = joinFlavors(flavorEntityList);
+        return "菜名: " + name
+                + "; 食材: " + materials
+                + "; 调味: " + flavors;
     }
 
     private void deleteDishVectorDocuments(Filter.Expression expr) {
@@ -302,6 +346,32 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
             return "";
         }
         return content.length() <= 80 ? content : content.substring(0, 80) + "...";
+    }
+
+    private String joinMaterials(List<DishMaterialEntity> materialEntityList) {
+        if (materialEntityList == null || materialEntityList.isEmpty()) {
+            return "未知";
+        }
+        return materialEntityList.stream()
+                .map(DishMaterialEntity::getMaterialName)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.collectingAndThen(Collectors.toList(), list -> list.isEmpty() ? "未知" : String.join("、", list)));
+    }
+
+    private String joinFlavors(List<DishFlavorEntity> flavorEntityList) {
+        if (flavorEntityList == null || flavorEntityList.isEmpty()) {
+            return "未知";
+        }
+        return flavorEntityList.stream()
+                .map(DishFlavorEntity::getFlavorName)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.collectingAndThen(Collectors.toList(), list -> list.isEmpty() ? "未知" : String.join("、", list)));
+    }
+
+    private String defaultText(String text) {
+        return StringUtils.hasText(text) ? text.trim() : "未知";
     }
 
     @Override

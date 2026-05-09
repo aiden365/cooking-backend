@@ -82,7 +82,7 @@ public class SpringAiConfig {
 
     @Bean(name = "qwen")
     public ChatModel qwen() {
-        return DashScopeChatModel.builder().dashScopeApi(DashScopeApi.builder().apiKey(dashscopeApiKey).build()).defaultOptions(DashScopeChatOptions.builder().model(qwenModel).build()).build();
+        return DashScopeChatModel.builder().dashScopeApi(DashScopeApi.builder().apiKey(dashscopeApiKey).build()).defaultOptions(DashScopeChatOptions.builder().model(qwenModel).multiModel(false).build()).build();
     }
 
 
