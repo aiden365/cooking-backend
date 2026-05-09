@@ -174,7 +174,7 @@ public class DishApi extends BaseController {
             return ok(dishIds);
         }
 
-        SearchRequest searchRequest = SearchRequest.builder().query(search).topK(10).build();
+        SearchRequest searchRequest = SearchRequest.builder().query(search).similarityThreshold(0.8f).topK(5).build();
         List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
         LinkedHashSet<Long> dishIds = new LinkedHashSet<>();
         if (documents != null) {

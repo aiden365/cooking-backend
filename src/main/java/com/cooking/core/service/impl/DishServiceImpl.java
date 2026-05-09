@@ -327,6 +327,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
         dishEntity.setCheckStatus(dishSaveDTO.getCheckStatus());
         dishEntity.setTips(dishSaveDTO.getTips());
         dishEntity.setImgPath(dishSaveDTO.getImgPath());
+        dishEntity.setVideoPath(dishSaveDTO.getVideoPath());
         super.saveOrUpdate(dishEntity);
 
         List<DishFlavorEntity> existingFlavors = dishFlavorService.lambdaQuery().eq(DishFlavorEntity::getDishId, dishEntity.getId()).list();

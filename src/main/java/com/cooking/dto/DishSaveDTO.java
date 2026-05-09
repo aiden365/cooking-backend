@@ -20,6 +20,8 @@ public class DishSaveDTO {
 
     private String imgPath;
 
+    private String videoPath;
+
     private List<FlavorItem> flavors;
 
     private List<MaterialItem> materials;
