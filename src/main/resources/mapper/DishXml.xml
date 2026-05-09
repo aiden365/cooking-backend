@@ -38,9 +38,14 @@
                     <when test="params.sortMethod == 'asc' or params.sortMethod == 'ASC'">asc</when>
                     <otherwise>desc</otherwise>
                 </choose>
+                , id
+                <choose>
+                    <when test="params.sortMethod == 'asc' or params.sortMethod == 'ASC'">asc</when>
+                    <otherwise>desc</otherwise>
+                </choose>
             </when>
             <otherwise>
-                order by create_time desc
+                order by create_time desc, id desc
             </otherwise>
         </choose>
 

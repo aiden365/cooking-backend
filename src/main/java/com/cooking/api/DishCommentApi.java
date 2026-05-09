@@ -21,10 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -133,4 +130,20 @@ public class DishCommentApi extends BaseController {
         dishCommentService.incrementStartCount(id);
         return ok();
     }
+
+    @PostMapping("delete")
+    public BaseResponse delete(@RequestBody JSONObject params) {
+        Long id = params.getLong("commentId");
+        if (id == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "评论id不能为空");
+        }
+        DishCommentEntity commentEntity = dishCommentService.getById(id);
+        if (commentEntity == null) {
+            throw new ApiException(BaseResponse.Code.fail.code, "评论不存在");
+        }
+
+        dishCommentService.removeById(id);
+        return ok();
+    }
+
 }
