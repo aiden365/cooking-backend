@@ -13,6 +13,8 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldNameConstants;
 
+import java.math.BigDecimal;
+
 
 /**
  * <p>
@@ -30,6 +32,8 @@ import lombok.experimental.FieldNameConstants;
 @Accessors(chain = true)
 @TableName("tbl_dish_appraises")
 public class DishAppraisesEntity extends BaseEntity {
+
+    public static final BigDecimal checkThreshold = new BigDecimal("4.5");
 
     /**
      * 菜品ID

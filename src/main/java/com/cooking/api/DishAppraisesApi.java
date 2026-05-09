@@ -23,10 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -158,10 +155,19 @@ public class DishAppraisesApi extends BaseController {
 
         Map<String, Object> result = buildDishScoreResult(dishId, appraisesList);
         BigDecimal totalScore = (BigDecimal) result.get("totalScore");
-
         dishEntity.setActiveVal(appraisesList.size());
         dishEntity.setTotalScore(totalScore.setScale(0, RoundingMode.HALF_UP).doubleValue());
         dishService.updateById(dishEntity);
+
+        if(totalScore.doubleValue() >= DishAppraisesEntity.checkThreshold.doubleValue()){
+            dishService.lambdaUpdate().set(DishEntity::getCheckTime, new Date()).set(DishEntity::getCheckStatus, 2).eq(DishEntity::getId, dishId).update();
+        }else{
+            dishService.lambdaUpdate().set(DishEntity::getCheckTime, null).set(DishEntity::getCheckStatus, 1).eq(DishEntity::getId, dishId).update();
+        }
+
+
+
+
 
         return ok(result);
     }

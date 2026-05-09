@@ -558,7 +558,7 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
                 dishEntity.setImgPath(imagePath);
                 super.updateById(dishEntity);
             }
-        });
+        }).start();
         return dishEntity;
     }
 
@@ -602,12 +602,12 @@ public class DishServiceImpl extends BaseServiceImpl<DishMapper, DishEntity> imp
     private List<String> callDashScopeImageApi(String prompt) {
 
         JSONObject requestBody = new JSONObject();
-        requestBody.put("model", qwenModel);
+        requestBody.put("model", "qwen3.5-plus");
         requestBody.put("tools", JSONArray.of(JSONObject.of("type", "web_search_image")));
         requestBody.put("input", prompt);
 
         String responseBody = restClient.post()
-                .uri(dashscopeBaseUrl + DASHSCOPE_IMAGE_API)
+                .uri("https://dashscope.aliyuncs.com" + DASHSCOPE_IMAGE_API)
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer " + dashscopeApiKey)
                 .body(requestBody.toJSONString())
