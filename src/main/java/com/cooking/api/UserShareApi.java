@@ -127,7 +127,7 @@ public class UserShareApi extends BaseController {
         deleteShareImage(userShareEntity.getImgPath());
 
         int activeVal = dishEntity.getActiveVal() == null ? 0 : dishEntity.getActiveVal();
-        dishEntity.setPopularVal(Math.max(0, activeVal - 1));
+        dishEntity.setActiveVal(Math.max(0, activeVal - 1));
         dishService.updateById(dishEntity);
 
         return ok();

@@ -197,11 +197,11 @@ public class DishApi extends BaseController {
         String retrievalText = buildDishSearchText(normalizedSearch);
         SearchRequest searchRequest = SearchRequest.builder()
                 .query(retrievalText)
-                .similarityThreshold(0.88f)
+                .similarityThreshold(0.86f)
                 .topK(8)
                 .build();
         List<Document> documents = dishVectorStore.similaritySearch(searchRequest);
-        LinkedHashSet<Long> dishIds = new LinkedHashSet<>();
+        Set<Long> dishIds = new LinkedHashSet<>();
         if (documents != null) {
             for (Document document : documents) {
                 if (document == null || !StringUtils.hasText(document.getId())) {
@@ -228,6 +228,11 @@ public class DishApi extends BaseController {
                     .filter(Objects::nonNull)
                     .toList();
             return ok(fallbackIds);
+        }
+
+        if(CollUtil.isNotEmpty(dishIds)){
+            List<DishEntity> dishEntities = dishService.listByIds(dishIds);
+            dishIds = dishEntities.stream().filter(e -> e.getTotalScore() == null || e.getTotalScore() >= 3.0D || e.getTotalScore() == 0D || (e.getCheckStatus() != null && e.getCheckStatus() == 2)).map(BaseEntity::getId).collect(Collectors.toSet());
         }
 
         return ok(new ArrayList<>(dishIds));
